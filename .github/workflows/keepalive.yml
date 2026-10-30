@@ -1,0 +1,13 @@
+# Render's free plan sleeps after 15 idle minutes and takes ~50 s to wake.
+# Ping it every 10 minutes so visitors and judges never hit a cold start.
+name: keep Render awake
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: curl -fsS -o /dev/null -w "%{http_code} in %{time_total}s\n" --retry 3 --max-time 90 https://gate-run.onrender.com/api/status
