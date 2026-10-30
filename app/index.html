@@ -392,7 +392,7 @@ function renderArenaRow(sel) {
   }
   const up = document.createElement('button'); up.className = 'arena up';
   up.innerHTML = `<img src="arenas/city_thumb.jpg" alt="" style="filter:grayscale(1) brightness(.5)"><span>+ YOUR PLACE</span>`;
-  up.onclick = () => $('#arenaIn').click(); row.appendChild(up);
+  up.onclick = () => $('#arenaIn').click(); row.insertBefore(up, row.firstChild);   // your place comes first
 }
 $('#arenaIn').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
@@ -400,7 +400,8 @@ $('#arenaIn').onchange = async e => {
   const mine = { id: 'mine', name: 'Your place', custom: true, tint: '#3a3550', thumb: URL.createObjectURL(blob), image: URL.createObjectURL(blob) };
   const i = ARENAS.findIndex(a => a.id === 'mine'); if (i >= 0) ARENAS.splice(i, 1); ARENAS.unshift(mine);
   applyArena({ id: 'mine', image: mine.image, tint: mine.tint }); renderArenaRow('mine');
-  if (!comfyOK) { toast('Preview mode: your photo is the arena. Run server.py to turn it into a manhwa battleground.'); return; }
+  if (!comfyOK) { if (status && status.server && status.tier === 'none') { $('#keyBox').style.display = 'block'; return toast('Your photo is the arena for now. Add your Comfy key to turn it into a manhwa battleground.', 5000); }
+    toast('Preview mode: your photo is the arena. Run server.py to turn it into a manhwa battleground.'); return; }
   try {
     toast('Turning your place into a battleground · FLUX 3', 60000);
     const a = await forgeJob('arena', blob); mine.image = mine.thumb = a.url;
