@@ -1,0 +1,82 @@
+{
+  "_about": "Sprite moves for the HD-2D game. Each character gets one full-body keyframe (FLUX 3) on flat green, then LTX-2 animates every move from it with a locked-off camera. The browser keys out the green and bakes sprite sheets. 'hunter' runs per player from their portrait; the others ship in app/sprites/.",
+  "green": "flat pure chroma green background (#00FF00) filling the whole frame, evenly lit, no floor, no shadow, no gradient",
+  "characters": {
+    "hunter": {
+      "keyframe": "Full-body side view of the same character as in the reference image, same face, hair and outfit: dark tactical coat with glowing cyan trim, holding a glowing cyan katana in a ready combat stance, body turned to the right, face visible in three-quarter view. The entire body is visible from head to feet with empty space all around, small in the center of the frame. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
+      "moves": {
+        "idle": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the character stays centered and the same size. Idle combat stance: slow breathing, coat and hair sway gently, the katana glows. The character does not move from its spot. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, smooth motion."
+        },
+        "run": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the character stays centered and the same size. The character runs in place facing right, a fast anime sprint cycle with the coat flowing back, katana held low, like running on a treadmill without moving across the frame. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, smooth fast motion."
+        },
+        "combo": {
+          "frames": 73,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character performs a fast three-hit katana combo to the right: a horizontal slash, a rising backhand slash, then a powerful downward cleave, each with a glowing cyan blade trail, then returns to the ready stance. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, sharp fast motion with smear frames.",
+          "maxf": 32
+        },
+        "dash": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character crouches and performs a lightning-fast forward dash to the right, body low and leaning forward, coat whipping back, cyan energy streaks, then recovers to the ready stance in place. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, very fast motion."
+        },
+        "special": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character raises the katana as cyan and violet energy erupts around it, eyes glowing, then unleashes a massive glowing crescent slash to the right with a burst of light, then holds the finishing pose. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, dramatic powerful motion."
+        }
+      }
+    },
+    "imp": {
+      "keyframe": "Full-body side view of a small shadow imp monster for an anime action game: a hunched creature of black smoke and violet crystal shards with glowing red eyes, sharp claws, facing right, entire body visible with empty space around, centered. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
+      "moves": {
+        "move": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the creature stays centered and the same size. The shadow imp scuttles in place facing right, an aggressive hopping crawl cycle, smoke trailing off its body, red eyes flickering. It does not travel across the frame. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting."
+        },
+        "attack": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the creature stays centered. The shadow imp rears back then lunges with a vicious claw swipe to the right, then recovers. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, fast motion."
+        }
+      }
+    },
+    "brute": {
+      "keyframe": "Full-body side view of a hulking shadow brute monster for an anime action game: a towering armored beast of black obsidian and violet glowing cracks with two curved horns and huge fists, glowing red eyes, facing right, entire body visible with empty space around, centered. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
+      "moves": {
+        "move": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the creature stays centered and the same size. The shadow brute stomps in place facing right, a heavy menacing walk cycle, shoulders rolling, violet cracks pulsing. It does not travel across the frame. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting."
+        },
+        "attack": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the creature stays centered. The shadow brute raises both fists high and smashes them down in front of it to the right with a shockwave of violet energy, then recovers. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, heavy powerful motion."
+        }
+      }
+    },
+    "boss": {
+      "keyframe": "Full-body side view of a towering anime demon lord boss, the Shadow Sovereign: a tall armored figure of black smoke and violet crystal with a jagged crown of golden horns, a tattered cape of darkness, a huge cleaver blade of violet energy, burning red eyes, facing right, entire body visible with empty space around, centered. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
+      "moves": {
+        "idle": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the boss stays centered and the same size. The demon lord stands menacingly, cape of darkness billowing, violet energy crackling along the blade, crown glowing, slow heavy breathing. It does not move from its spot. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting."
+        },
+        "attack": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the boss stays centered. The demon lord lifts the huge violet cleaver overhead and slams it down to the right in a devastating strike with an explosion of violet energy, then rises again. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, heavy powerful motion."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,182 @@
+{
+ "1": {
+  "class_type": "UNETLoader",
+  "_meta": {
+   "title": "Load FLUX Kontext model"
+  },
+  "inputs": {
+   "unet_name": "flux1-dev-kontext_fp8_scaled.safetensors",
+   "weight_dtype": "default"
+  }
+ },
+ "2": {
+  "class_type": "DualCLIPLoader",
+  "_meta": {
+   "title": "Load text encoders"
+  },
+  "inputs": {
+   "clip_name1": "clip_l.safetensors",
+   "clip_name2": "t5xxl_fp8_e4m3fn_scaled.safetensors",
+   "type": "flux"
+  }
+ },
+ "3": {
+  "class_type": "VAELoader",
+  "_meta": {
+   "title": "Load VAE"
+  },
+  "inputs": {
+   "vae_name": "ae.safetensors"
+  }
+ },
+ "4": {
+  "class_type": "LoadImage",
+  "_meta": {
+   "title": "IN_SELFIE"
+  },
+  "inputs": {
+   "image": "example.png"
+  }
+ },
+ "5": {
+  "class_type": "FluxKontextImageScale",
+  "_meta": {
+   "title": "Scale for Kontext"
+  },
+  "inputs": {
+   "image": [
+    "4",
+    0
+   ]
+  }
+ },
+ "6": {
+  "class_type": "VAEEncode",
+  "_meta": {
+   "title": "Encode selfie"
+  },
+  "inputs": {
+   "pixels": [
+    "5",
+    0
+   ],
+   "vae": [
+    "3",
+    0
+   ]
+  }
+ },
+ "7": {
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "IN_PROMPT"
+  },
+  "inputs": {
+   "clip": [
+    "2",
+    0
+   ],
+   "text": "Turn this person into a hunter from a semi-realistic Korean action webtoon (manhwa). Keep their exact face shape, skin tone, hairstyle, facial hair and expression so they are clearly recognizable as the same person. Realistic proportions, sharp detailed rendering, glossy high-contrast lighting, deep shadows. Dark tactical hunter coat with glowing cyan trim and a katana strapped to their back, a faint cold blue and violet aura, eyes with a subtle cyan glow. Head and shoulders portrait facing the camera, dark night city street behind with violet light. Safe for work."
+  }
+ },
+ "8": {
+  "class_type": "ReferenceLatent",
+  "_meta": {
+   "title": "Reference selfie"
+  },
+  "inputs": {
+   "conditioning": [
+    "7",
+    0
+   ],
+   "latent": [
+    "6",
+    0
+   ]
+  }
+ },
+ "9": {
+  "class_type": "FluxGuidance",
+  "_meta": {
+   "title": "Guidance"
+  },
+  "inputs": {
+   "conditioning": [
+    "8",
+    0
+   ],
+   "guidance": 2.5
+  }
+ },
+ "10": {
+  "class_type": "ConditioningZeroOut",
+  "_meta": {
+   "title": "Empty negative"
+  },
+  "inputs": {
+   "conditioning": [
+    "7",
+    0
+   ]
+  }
+ },
+ "11": {
+  "class_type": "KSampler",
+  "_meta": {
+   "title": "IN_SEED"
+  },
+  "inputs": {
+   "model": [
+    "1",
+    0
+   ],
+   "positive": [
+    "9",
+    0
+   ],
+   "negative": [
+    "10",
+    0
+   ],
+   "latent_image": [
+    "6",
+    0
+   ],
+   "seed": 42,
+   "steps": 20,
+   "cfg": 1.0,
+   "sampler_name": "euler",
+   "scheduler": "simple",
+   "denoise": 1.0
+  }
+ },
+ "12": {
+  "class_type": "VAEDecode",
+  "_meta": {
+   "title": "Decode"
+  },
+  "inputs": {
+   "samples": [
+    "11",
+    0
+   ],
+   "vae": [
+    "3",
+    0
+   ]
+  }
+ },
+ "13": {
+  "class_type": "SaveImage",
+  "_meta": {
+   "title": "OUT"
+  },
+  "inputs": {
+   "images": [
+    "12",
+    0
+   ],
+   "filename_prefix": "gaterun/hunter"
+  }
+ }
+}

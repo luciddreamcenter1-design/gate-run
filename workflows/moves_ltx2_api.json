@@ -1,0 +1,659 @@
+{
+ "1": {
+  "class_type": "SaveVideo",
+  "_meta": {
+   "title": "OUT"
+  },
+  "inputs": {
+   "filename_prefix": "gaterun/move",
+   "video": [
+    "26",
+    0
+   ],
+   "format": "mp4",
+   "format.codec": "auto"
+  }
+ },
+ "2": {
+  "class_type": "LTXVCropGuides",
+  "_meta": {
+   "title": "LTXVCropGuides"
+  },
+  "inputs": {
+   "positive": [
+    "6",
+    0
+   ],
+   "negative": [
+    "6",
+    1
+   ],
+   "latent": [
+    "10",
+    0
+   ]
+  }
+ },
+ "3": {
+  "class_type": "ImageScaleBy",
+  "_meta": {
+   "title": "ImageScaleBy"
+  },
+  "inputs": {
+   "upscale_method": "lanczos",
+   "scale_by": 0.5,
+   "image": [
+    "24",
+    0
+   ]
+  }
+ },
+ "4": {
+  "class_type": "GetImageSize",
+  "_meta": {
+   "title": "GetImageSize"
+  },
+  "inputs": {
+   "image": [
+    "3",
+    0
+   ]
+  }
+ },
+ "5": {
+  "class_type": "LTXVEmptyLatentAudio",
+  "_meta": {
+   "title": "LTXVEmptyLatentAudio"
+  },
+  "inputs": {
+   "frames_number": [
+    "25",
+    0
+   ],
+   "frame_rate": [
+    "14",
+    0
+   ],
+   "batch_size": 1,
+   "audio_vae": [
+    "12",
+    0
+   ]
+  }
+ },
+ "6": {
+  "class_type": "LTXVConditioning",
+  "_meta": {
+   "title": "LTXVConditioning"
+  },
+  "inputs": {
+   "frame_rate": [
+    "13",
+    0
+   ],
+   "positive": [
+    "17",
+    0
+   ],
+   "negative": [
+    "18",
+    0
+   ]
+  }
+ },
+ "7": {
+  "class_type": "EmptyLTXVLatentVideo",
+  "_meta": {
+   "title": "EmptyLTXVLatentVideo"
+  },
+  "inputs": {
+   "width": [
+    "4",
+    0
+   ],
+   "height": [
+    "4",
+    1
+   ],
+   "length": [
+    "25",
+    0
+   ],
+   "batch_size": 1
+  }
+ },
+ "8": {
+  "class_type": "LTXVConcatAVLatent",
+  "_meta": {
+   "title": "LTXVConcatAVLatent"
+  },
+  "inputs": {
+   "video_latent": [
+    "39",
+    0
+   ],
+   "audio_latent": [
+    "5",
+    0
+   ]
+  }
+ },
+ "9": {
+  "class_type": "SamplerCustomAdvanced",
+  "_meta": {
+   "title": "SamplerCustomAdvanced"
+  },
+  "inputs": {
+   "noise": [
+    "16",
+    0
+   ],
+   "guider": [
+    "19",
+    0
+   ],
+   "sampler": [
+    "15",
+    0
+   ],
+   "sigmas": [
+    "23",
+    0
+   ],
+   "latent_image": [
+    "8",
+    0
+   ]
+  }
+ },
+ "10": {
+  "class_type": "LTXVSeparateAVLatent",
+  "_meta": {
+   "title": "LTXVSeparateAVLatent"
+  },
+  "inputs": {
+   "av_latent": [
+    "9",
+    0
+   ]
+  }
+ },
+ "11": {
+  "class_type": "LTXVLatentUpsampler",
+  "_meta": {
+   "title": "spatial"
+  },
+  "inputs": {
+   "samples": [
+    "2",
+    2
+   ],
+   "upscale_model": [
+    "21",
+    0
+   ],
+   "vae": [
+    "38",
+    2
+   ]
+  }
+ },
+ "12": {
+  "class_type": "LTXVAudioVAELoader",
+  "_meta": {
+   "title": "LTXVAudioVAELoader"
+  },
+  "inputs": {
+   "ckpt_name": "ltx-2-19b-dev.safetensors"
+  }
+ },
+ "13": {
+  "class_type": "PrimitiveFloat",
+  "_meta": {
+   "title": "Frame Rate(float)"
+  },
+  "inputs": {
+   "value": 24
+  }
+ },
+ "14": {
+  "class_type": "PrimitiveInt",
+  "_meta": {
+   "title": "Frame Rate(int)"
+  },
+  "inputs": {
+   "value": 24
+  }
+ },
+ "15": {
+  "class_type": "KSamplerSelect",
+  "_meta": {
+   "title": "KSamplerSelect"
+  },
+  "inputs": {
+   "sampler_name": "euler_ancestral"
+  }
+ },
+ "16": {
+  "class_type": "RandomNoise",
+  "_meta": {
+   "title": "IN_SEED"
+  },
+  "inputs": {
+   "noise_seed": 4545545
+  }
+ },
+ "17": {
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "IN_PROMPT"
+  },
+  "inputs": {
+   "text": "Locked-off static camera. The anime character holds a ready stance on a flat pure green background.",
+   "clip": [
+    "22",
+    0
+   ]
+  }
+ },
+ "18": {
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "Negative"
+  },
+  "inputs": {
+   "text": "watermark, logo, channel logo, TV logo, broadcast overlay,\nUI elements, interface, HUD, subtitles, captions,\nsymbols, glyphs, letters, text, numbers,\non-screen graphics, corner marks, branding,\ntimestamp, camera overlay, app icon watermark, text, markup, logo, blurry, out of focus, overexposed, underexposed, low contrast, washed out colors, excessive noise, grainy texture, poor lighting, flickering, motion blur, distorted proportions, unnatural skin tones, deformed facial features, asymmetrical face, missing facial features, extra limbs, disfigured hands, wrong hand count, artifacts around text,, missing microphone, misplaced microphone, inconsistent perspective, camera shake, incorrect depth of field, background too sharp, background clutter, distracting reflections, harsh shadows, inconsistent lighting direction, color banding, cartoonish rendering, 3D CGI look, unrealistic materials, uncanny valley effect, incorrect ethnicity, wrong gender, exaggerated expressions, smiling, laughing, exaggerated sadness, wrong gaze direction, eyes looking at camera, mismatched lip sync, silent or muted audio, distorted voice, robotic voice, echo, background noise, off-sync audio, missing sniff sounds, incorrect dialogue, added dialogue, repetitive speech, jittery movement, awkward pauses, incorrect timing, unnatural transitions, inconsistent framing, tilted camera, missing door or shelves, missing shallow depth of field, flat lighting, inconsistent tone, cinematic oversaturation, stylized filters, or AI artifacts., deformed face, distorted face, extra limbs, blurry, jittery, flicker, camera movement, camera pan, zoom, dolly, tracking shot, scene change, cut, background change, shadows on background, floor, ground, text",
+   "clip": [
+    "22",
+    0
+   ]
+  }
+ },
+ "19": {
+  "class_type": "CFGGuider",
+  "_meta": {
+   "title": "CFGGuider"
+  },
+  "inputs": {
+   "cfg": 1,
+   "model": [
+    "28",
+    0
+   ],
+   "positive": [
+    "6",
+    0
+   ],
+   "negative": [
+    "6",
+    1
+   ]
+  }
+ },
+ "20": {
+  "class_type": "LoraLoaderModelOnly",
+  "_meta": {
+   "title": "LoraLoaderModelOnly"
+  },
+  "inputs": {
+   "lora_name": "ltx-2-19b-distilled-lora-384.safetensors",
+   "strength_model": 1,
+   "model": [
+    "38",
+    0
+   ]
+  }
+ },
+ "21": {
+  "class_type": "LatentUpscaleModelLoader",
+  "_meta": {
+   "title": "LatentUpscaleModelLoader"
+  },
+  "inputs": {
+   "model_name": "ltx-2-spatial-upscaler-x2-1.0.safetensors"
+  }
+ },
+ "22": {
+  "class_type": "LTXAVTextEncoderLoader",
+  "_meta": {
+   "title": "LTXAVTextEncoderLoader"
+  },
+  "inputs": {
+   "text_encoder": "gemma_3_12B_it.safetensors",
+   "ckpt_name": "ltx-2-19b-dev.safetensors",
+   "device": "default"
+  }
+ },
+ "23": {
+  "class_type": "LTXVScheduler",
+  "_meta": {
+   "title": "LTXVScheduler"
+  },
+  "inputs": {
+   "steps": 12,
+   "max_shift": 2.05,
+   "base_shift": 0.95,
+   "stretch": true,
+   "terminal": 0.1,
+   "latent": [
+    "8",
+    0
+   ]
+  }
+ },
+ "24": {
+  "class_type": "EmptyImage",
+  "_meta": {
+   "title": "Canvas size (final, /64)"
+  },
+  "inputs": {
+   "width": 512,
+   "height": 768,
+   "batch_size": 1,
+   "color": 0
+  }
+ },
+ "25": {
+  "class_type": "PrimitiveInt",
+  "_meta": {
+   "title": "Frames (8n+1)"
+  },
+  "inputs": {
+   "value": 49
+  }
+ },
+ "26": {
+  "class_type": "CreateVideo",
+  "_meta": {
+   "title": "CreateVideo"
+  },
+  "inputs": {
+   "fps": [
+    "13",
+    0
+   ],
+   "bit_depth": 8,
+   "color_space": "sRGB",
+   "codec": "none",
+   "images": [
+    "37",
+    0
+   ],
+   "audio": [
+    "29",
+    0
+   ]
+  }
+ },
+ "27": {
+  "class_type": "LoraLoaderModelOnly",
+  "_meta": {
+   "title": "IN_LORA"
+  },
+  "inputs": {
+   "lora_name": "ltx-2-19b-lora-camera-control-dolly-in.safetensors",
+   "strength_model": 0.0,
+   "model": [
+    "38",
+    0
+   ]
+  }
+ },
+ "28": {
+  "class_type": "LoraLoaderModelOnly",
+  "_meta": {
+   "title": "LoraLoaderModelOnly"
+  },
+  "inputs": {
+   "lora_name": "ltx-2-19b-distilled-lora-384.safetensors",
+   "strength_model": 1,
+   "model": [
+    "27",
+    0
+   ]
+  }
+ },
+ "29": {
+  "class_type": "LTXVAudioVAEDecode",
+  "_meta": {
+   "title": "LTXVAudioVAEDecode"
+  },
+  "inputs": {
+   "samples": [
+    "36",
+    1
+   ],
+   "audio_vae": [
+    "12",
+    0
+   ]
+  }
+ },
+ "30": {
+  "class_type": "LTXVConcatAVLatent",
+  "_meta": {
+   "title": "LTXVConcatAVLatent"
+  },
+  "inputs": {
+   "video_latent": [
+    "44",
+    0
+   ],
+   "audio_latent": [
+    "10",
+    1
+   ]
+  }
+ },
+ "31": {
+  "class_type": "KSamplerSelect",
+  "_meta": {
+   "title": "KSamplerSelect"
+  },
+  "inputs": {
+   "sampler_name": "euler_ancestral"
+  }
+ },
+ "32": {
+  "class_type": "ManualSigmas",
+  "_meta": {
+   "title": "ManualSigmas"
+  },
+  "inputs": {
+   "sigmas": "0.909375, 0.725, 0.421875, 0.0"
+  }
+ },
+ "33": {
+  "class_type": "CFGGuider",
+  "_meta": {
+   "title": "CFGGuider"
+  },
+  "inputs": {
+   "cfg": 1,
+   "model": [
+    "42",
+    0
+   ],
+   "positive": [
+    "2",
+    0
+   ],
+   "negative": [
+    "2",
+    1
+   ]
+  }
+ },
+ "34": {
+  "class_type": "RandomNoise",
+  "_meta": {
+   "title": "RandomNoise"
+  },
+  "inputs": {
+   "noise_seed": 0
+  }
+ },
+ "35": {
+  "class_type": "SamplerCustomAdvanced",
+  "_meta": {
+   "title": "SamplerCustomAdvanced"
+  },
+  "inputs": {
+   "noise": [
+    "34",
+    0
+   ],
+   "guider": [
+    "33",
+    0
+   ],
+   "sampler": [
+    "31",
+    0
+   ],
+   "sigmas": [
+    "32",
+    0
+   ],
+   "latent_image": [
+    "30",
+    0
+   ]
+  }
+ },
+ "36": {
+  "class_type": "LTXVSeparateAVLatent",
+  "_meta": {
+   "title": "LTXVSeparateAVLatent"
+  },
+  "inputs": {
+   "av_latent": [
+    "35",
+    1
+   ]
+  }
+ },
+ "37": {
+  "class_type": "VAEDecodeTiled",
+  "_meta": {
+   "title": "VAEDecodeTiled"
+  },
+  "inputs": {
+   "tile_size": 512,
+   "overlap": 64,
+   "temporal_size": 4096,
+   "temporal_overlap": 8,
+   "samples": [
+    "36",
+    0
+   ],
+   "vae": [
+    "38",
+    2
+   ]
+  }
+ },
+ "38": {
+  "class_type": "CheckpointLoaderSimple",
+  "_meta": {
+   "title": "CheckpointLoaderSimple"
+  },
+  "inputs": {
+   "ckpt_name": "ltx-2-19b-dev.safetensors"
+  }
+ },
+ "39": {
+  "class_type": "LTXVImgToVideoInplace",
+  "_meta": {
+   "title": "Apply hunter image (stage 1)"
+  },
+  "inputs": {
+   "strength": 1,
+   "bypass": false,
+   "vae": [
+    "38",
+    2
+   ],
+   "image": [
+    "40",
+    0
+   ],
+   "latent": [
+    "7",
+    0
+   ]
+  }
+ },
+ "40": {
+  "class_type": "LTXVPreprocess",
+  "_meta": {
+   "title": "LTXVPreprocess"
+  },
+  "inputs": {
+   "img_compression": 33,
+   "image": [
+    "41",
+    0
+   ]
+  }
+ },
+ "41": {
+  "class_type": "ImageScaleToMaxDimension",
+  "_meta": {
+   "title": "ImageScaleToMaxDimension"
+  },
+  "inputs": {
+   "upscale_method": "lanczos",
+   "largest_size": 1536,
+   "image": [
+    "43",
+    0
+   ]
+  }
+ },
+ "42": {
+  "class_type": "LoraLoaderModelOnly",
+  "_meta": {
+   "title": "IN_LORA"
+  },
+  "inputs": {
+   "lora_name": "ltx-2-19b-lora-camera-control-dolly-in.safetensors",
+   "strength_model": 0.0,
+   "model": [
+    "20",
+    0
+   ]
+  }
+ },
+ "43": {
+  "class_type": "LoadImage",
+  "_meta": {
+   "title": "IN_IMAGE"
+  },
+  "inputs": {
+   "image": "example.png"
+  }
+ },
+ "44": {
+  "class_type": "LTXVImgToVideoInplace",
+  "_meta": {
+   "title": "Re-apply hunter image (stage 2)"
+  },
+  "inputs": {
+   "strength": 1.0,
+   "bypass": false,
+   "vae": [
+    "38",
+    2
+   ],
+   "image": [
+    "40",
+    0
+   ],
+   "latent": [
+    "11",
+    0
+   ]
+  }
+ }
+}

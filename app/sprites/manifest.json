@@ -1,0 +1,122 @@
+{
+ "frame": [
+  192,
+  288
+ ],
+ "fps": 12,
+ "chars": {
+  "hunter": {
+   "anchor": {
+    "top": 0.0764,
+    "foot": 0.9826,
+    "cx": 0.5156
+   },
+   "anims": {
+    "idle": {
+     "img": "hunter_idle.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": true
+    },
+    "run": {
+     "img": "hunter_run.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 13,
+     "loop": true
+    },
+    "combo": {
+     "img": "hunter_combo.png",
+     "cols": 8,
+     "rows": 4,
+     "n": 32,
+     "loop": false
+    },
+    "dash": {
+     "img": "hunter_dash.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": false
+    },
+    "special": {
+     "img": "hunter_special.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": false
+    }
+   }
+  },
+  "imp": {
+   "anchor": {
+    "top": 0.3125,
+    "foot": 0.8611,
+    "cx": 0.4948
+   },
+   "anims": {
+    "move": {
+     "img": "imp_move.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": true
+    },
+    "attack": {
+     "img": "imp_attack.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": false
+    }
+   }
+  },
+  "brute": {
+   "anchor": {
+    "top": 0.0382,
+    "foot": 0.9722,
+    "cx": 0.4948
+   },
+   "anims": {
+    "move": {
+     "img": "brute_move.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": true
+    },
+    "attack": {
+     "img": "brute_attack.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": false
+    }
+   }
+  },
+  "boss": {
+   "anchor": {
+    "top": 0.0,
+    "foot": 0.9965,
+    "cx": 0.4948
+   },
+   "anims": {
+    "idle": {
+     "img": "boss_idle.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": true
+    },
+    "attack": {
+     "img": "boss_attack.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 15,
+     "loop": false
+    }
+   }
+  }
+ }
+}

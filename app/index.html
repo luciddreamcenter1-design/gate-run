@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Gate Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#07060d; --panel:rgba(16,13,30,.86); --line:#2b2550; --ink:#eef0ff; --muted:#9a9cc4;
+  --gate:#7c5cff; --gate2:#38d6ff; --gold:#ffd84a; --danger:#ff4d6d; --ok:#4dffb0;
+}
+:root[data-theme="dark"]{ --bg:#07060d; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#07060d; } }
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none}
+canvas#gl,canvas#cv{position:fixed;inset:0;display:block;width:100%;height:100%}
+canvas#gl{z-index:0}canvas#cv{z-index:1}
+.screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+.screen.on{display:flex}
+.card{width:min(460px,100%);background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px 22px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 20px 80px rgba(124,92,255,.25)}
+.kicker{font:600 12px/1 "Chakra Petch",sans-serif;letter-spacing:.22em;color:var(--gate2);text-transform:uppercase}
+h1{font:700 32px/1.05 "Chakra Petch",sans-serif;margin:10px 0 10px}
+h2{font:700 24px/1.1 "Chakra Petch",sans-serif;margin:8px 0 6px}
+p{color:var(--muted);line-height:1.5;margin:0 0 16px;font-size:15px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:12px;padding:14px 16px;font:700 16px/1 "Chakra Petch",sans-serif;letter-spacing:.04em;cursor:pointer;color:#0b0820;background:linear-gradient(90deg,var(--gate2),var(--gate));margin-top:10px}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:default}
+label.field{display:block;font-size:12px;color:var(--muted);margin:4px 0 6px;letter-spacing:.06em;text-transform:uppercase}
+input[type=text]{width:100%;background:#0c0a18;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:12px;font:600 16px Inter,sans-serif;-webkit-user-select:text;user-select:text}
+.pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 10px;margin-top:16px}
+.dot{width:8px;height:8px;border-radius:50%;background:#666}
+.dot.ok{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+.dot.warn{background:var(--gold)}
+.steps{list-style:none;padding:0;margin:14px 0 4px}
+.steps li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:14px}
+.steps .ic{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto;margin-top:1px}
+.steps .run .ic{border-color:var(--gate2);border-top-color:transparent;animation:spin .8s linear infinite}
+.steps .done .ic{background:var(--ok);border-color:var(--ok)}
+.steps .skip .ic,.steps .fail .ic{background:#3a3560;border-color:#3a3560}
+.steps small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pair{display:flex;gap:12px;justify-content:center;align-items:center;margin:6px 0 4px}
+.pair img,.pair canvas{width:120px;height:120px;border-radius:14px;object-fit:cover;border:1px solid var(--line);background:#0c0a18}
+.pair .arrow{font:700 22px "Chakra Petch";color:var(--gate2)}
+.hunter-glow{box-shadow:0 0 0 2px var(--gate2),0 0 30px rgba(56,214,255,.5)}
+#endImg{width:100%;max-height:52vh;object-fit:contain;border-radius:12px;display:block;margin:6px 0 4px}
+.row{display:flex;gap:10px}
+.row .btn{flex:1}
+#clipLayer{position:fixed;inset:0;z-index:8;background:#000;display:none;align-items:center;justify-content:center}
+#clipLayer.on{display:flex}
+#clipLayer>img:not(.plateHunter),#clipLayer video{max-width:100%;max-height:100%}
+.plateHunter{position:absolute;left:50%;bottom:12%;width:min(46vw,300px);aspect-ratio:1;border-radius:50%;object-fit:cover;border:3px solid var(--gate2);box-shadow:0 0 40px var(--gate2);transform:translateX(-50%);animation:plateIn 5s ease-in forwards}
+@keyframes plateIn{0%{opacity:0;transform:translateX(-50%) scale(.6)}15%{opacity:1;transform:translateX(-50%) scale(1)}70%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}100%{opacity:0;transform:translateX(-50%) translateY(-38vh) scale(.25)}}
+.directorCanvas{height:100%;max-width:100%;aspect-ratio:9/16;object-fit:contain;display:block}
+#skip{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));width:auto;padding:10px 16px}
+.tbtn{position:fixed;border-radius:50%;border:2px solid var(--gate2);background:rgba(56,214,255,.12);color:var(--ink);font:700 14px "Chakra Petch";letter-spacing:.08em;z-index:6;display:none;touch-action:none}
+#atkBtn{right:20px;bottom:calc(22px + env(safe-area-inset-bottom));width:96px;height:96px;font-size:16px;background:rgba(56,214,255,.2)}
+#dashBtn{right:128px;bottom:calc(20px + env(safe-area-inset-bottom));width:70px;height:70px}
+#spBtn{right:34px;bottom:calc(132px + env(safe-area-inset-bottom));width:70px;height:70px;border-color:#b18cff;background:rgba(177,140,255,.14)}
+#spBtn.ready{box-shadow:0 0 24px #b18cff;background:rgba(177,140,255,.4)}
+#toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:10px 14px;border-radius:10px;font-size:13px;z-index:20;display:none;max-width:calc(100% - 32px)}
+.tiny{font-size:12px;color:var(--muted);margin-top:12px;line-height:1.45}
+a{color:var(--gate2)}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<!-- START -->
+<section class="screen on" id="sStart">
+  <div class="card">
+    <div class="kicker">Gatecrashers · Gate Run</div>
+    <h1>Step through the Gate as yourself.</h1>
+    <p>Upload a selfie. ComfyUI turns you into an anime hunter, opens a Gate behind you, and drops you into the fight.</p>
+    <label class="field" for="nameIn">Hunter name</label>
+    <input type="text" id="nameIn" maxlength="16" placeholder="Your name" autocomplete="off">
+    <input type="file" id="fileIn" accept="image/*" capture="user" hidden>
+    <button class="btn" id="bSelfie">Take or upload a selfie</button>
+    <button class="btn ghost" id="bGuest">Play as a guest hunter</button>
+    <div class="pill"><span class="dot" id="cDot"></span><span id="cTxt">Checking for ComfyUI…</span></div>
+  </div>
+</section>
+
+<!-- FORGE -->
+<section class="screen" id="sForge">
+  <div class="card">
+    <div class="kicker">Hunter Forge</div>
+    <h2 id="forgeTitle">Forging your hunter</h2>
+    <div class="pair"><canvas id="selfieThumb" width="240" height="240"></canvas><span class="arrow">→</span><canvas id="hunterThumb" width="240" height="240"></canvas></div>
+    <ul class="steps">
+      <li id="st1"><span class="ic"></span><div>Reading your photo</div></li>
+      <li id="st2"><span class="ic"></span><div>Forging your anime hunter<small>FLUX 3 image edit</small></div></li>
+      <li id="st3"><span class="ic"></span><div>Directing your trailer<small>3-shot trailer · FLUX 3 keyframes + LTX-2 + LoRA</small></div></li>
+      <li id="st4"><span class="ic"></span><div>Animating your hunter<small>Full-body moveset · LTX-2 on Comfy Cloud</small></div></li>
+    </ul>
+    <button class="btn" id="bEnter" disabled>Enter the Gate</button>
+    <div class="tiny" id="forgeNote"></div>
+  </div>
+</section>
+
+<!-- END -->
+<section class="screen" id="sEnd">
+  <div class="card">
+    <div class="kicker" id="endKicker">Gate cleared</div>
+    <img id="endImg" alt="Your Hunter License">
+    <button class="btn" id="bShare" style="display:none">Share my Hunter License</button>
+    <button class="btn" id="bSave">Save my Hunter License</button>
+    <button class="btn" id="bReel" style="display:none">Make my Reel</button>
+    <button class="btn ghost" id="bClip" style="display:none">Save my trailer</button>
+    <div class="row"><button class="btn ghost" id="bAgain">Run it again</button><button class="btn ghost" id="bNew">New selfie</button></div>
+    <div class="tiny">Post it with <b>#OpenSourceHiggsfield</b></div>
+  </div>
+</section>
+
+<div id="clipLayer"><button class="btn ghost" id="skip">Skip</button></div>
+<button id="atkBtn" class="tbtn">ATK</button><button id="dashBtn" class="tbtn">DASH</button><button id="spBtn" class="tbtn">SP</button>
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   Gate Run: see yourself in the game.
+   Pipeline: selfie -> ComfyUI (FLUX edit) -> anime hunter
+                    -> ComfyUI (LTX i2v) -> Gate opening clip
+   Without ComfyUI it falls back to an in-browser toon filter
+   so the player still sees themselves.
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* ---------- audio: ElevenLabs sound kit (pre-generated via Comfy Router, see app/audio) ---------- */
+const SOUNDS = ['sfx_riser','sfx_braam','sfx_gate_open','sfx_slash','sfx_hit','sfx_dash','sfx_shard','sfx_levelup','sfx_boss','sfx_hurt','sfx_win','sfx_lose','sfx_whoosh','music_loop','vo_gate_open','vo_boss','vo_levelup','vo_cleared','vo_fallen','vo_clip_ready'];
+const AK = {
+  ctx: null, buf: {}, master: null, musicGain: null, musicSrc: null, recDest: null, last: {},
+  init() {
+    if (this.ctx) return; const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+    this.ctx = new C(); this.master = this.ctx.createGain(); this.master.gain.value = .9;
+    const lim = this.ctx.createDynamicsCompressor(); lim.threshold.value = -6; lim.knee.value = 4; lim.ratio.value = 12; lim.attack.value = .003; lim.release.value = .15;   // keeps the mix from clipping
+    this.master.connect(lim); lim.connect(this.ctx.destination);
+    if (this.ctx.createMediaStreamDestination) { this.recDest = this.ctx.createMediaStreamDestination(); lim.connect(this.recDest); }
+    this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0; this.musicGain.connect(this.master);
+    for (const n of SOUNDS) fetch('audio/' + n + '.mp3').then(r => r.arrayBuffer()).then(b => this.ctx.decodeAudioData(b)).then(d => { this.buf[n] = d; if (n === 'music_loop' && this.wantMusic) this.music(this.wantMusic); }).catch(() => {});
+  },
+  playBuffer(b, vol = 1, when = 0, rate = 1, dest) { if (!this.ctx || !b) return null; const s = this.ctx.createBufferSource(), gn = this.ctx.createGain(); s.buffer = b; s.playbackRate.value = rate; gn.gain.value = vol; s.connect(gn).connect(dest || this.master); s.start(this.ctx.currentTime + when); return s; },
+  play(n, vol = 1, rate = 1, gap = 0) {
+    n = n.includes('_') ? n : 'sfx_' + n;
+    const now = performance.now(); if (gap && now - (this.last[n] || 0) < gap * 1000) return; this.last[n] = now;
+    return this.playBuffer(this.buf[n], vol, 0, rate);
+  },
+  vo(n) { const b = this.buf[n]; if (b) { this.playBuffer(b, 1.2); this.duck(0, b.duration); } },
+  duck(when, dur) { if (!this.musicGain) return; const g = this.musicGain.gain, t = this.ctx.currentTime + when, v = this.musicLevel || 0; g.cancelScheduledValues(t); g.setTargetAtTime(v * .35, t, .08); g.setTargetAtTime(v, t + dur, .3); },
+  music(vol = .3) {
+    this.wantMusic = vol; this.musicLevel = vol;
+    if (!this.ctx || !this.buf.music_loop) return;
+    if (!this.musicSrc) { this.musicSrc = this.ctx.createBufferSource(); this.musicSrc.buffer = this.buf.music_loop; this.musicSrc.loop = true; this.musicSrc.connect(this.musicGain); this.musicSrc.start(); }
+    this.musicGain.gain.setTargetAtTime(vol, this.ctx.currentTime, .4);
+  },
+  musicOff(fade = .6) { this.wantMusic = 0; this.musicLevel = 0; if (this.musicGain) this.musicGain.gain.setTargetAtTime(0, this.ctx.currentTime, fade / 3); },
+};
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => { AK.init(); AK.ctx && AK.ctx.state === 'suspended' && AK.ctx.resume(); }, { passive: true }));
+
+/* Records short gameplay segments (9:16 crop of the 3D world + HUD + game audio) for the Reel. */
+const GameRec = {
+  rec: null, url: null, dur: 0, tag: '',
+  start(sec, tag) {
+    const mime = window.Director && Director.pickMime(); if (!mime) return;
+    if (this.rec) { this.pending = [sec, tag]; return this.stop(); }   // start once the current segment has finalized
+    this.cv = this.cv || Object.assign(document.createElement('canvas'), { width: 720, height: 1280 }); this.x = this.cv.getContext('2d');
+    const st = this.cv.captureStream(0); this.vt = st.getVideoTracks()[0]; this.lastPush = 0; if (AK.recDest) AK.recDest.stream.getAudioTracks().forEach(t => st.addTrack(t));
+    const chunks = []; this.rec = new MediaRecorder(st, { mimeType: mime, videoBitsPerSecond: 5e6 });
+    this.rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    this.rec.onstop = () => { if (this.url) URL.revokeObjectURL(this.url); this.url = URL.createObjectURL(new Blob(chunks, { type: mime.split(';')[0] })); this.dur = this.recDur; this.tag = tag; this.rec = null; if (this.pending) { const [s2, t2] = this.pending; this.pending = null; this.start(s2, t2); } };
+    this.rec.start(250); this.t0 = performance.now(); this.until = this.t0 + sec * 1000;
+  },
+  frame() {
+    if (!this.rec) return;
+    const sw = Math.min(W, H * 9 / 16), sh = sw * 16 / 9, sx = (W - sw) / 2, sy = (H - sh) / 2;
+    this.x.fillStyle = '#07060d'; this.x.fillRect(0, 0, 720, 1280);
+    for (const c of [document.getElementById('gl'), cv]) if (c && c.width) this.x.drawImage(c, sx * c.width / W, sy * c.height / H, sw * c.width / W, sh * c.height / H, 0, 0, 720, 1280);
+    const now = performance.now(); if (this.vt && this.vt.requestFrame && now - this.lastPush >= 32) { this.vt.requestFrame(); this.lastPush = now; }
+    if (performance.now() > this.until) this.stop();
+  },
+  stop() { if (this.rec && this.rec.state === 'recording') { this.recDur = (performance.now() - this.t0) / 1000; this.rec.stop(); } },
+};
+
+/* ---------- generation client ----------
+   server.py routes every job: Comfy Router -> Comfy Cloud (comfy-sdk) -> local ComfyUI,
+   switching to the next route on failure. The page only asks for a stage. */
+let comfyOK = false, status = null;
+const ROUTE_LABEL = r => !r ? '' : r.startsWith('router:') ? 'Comfy Router · ' + r.slice(7)
+  : r.startsWith('cloud:') ? 'Comfy Cloud · ' + r.slice(6).replace(/_api\.json$/, '') : 'Local ComfyUI · ' + r.slice(6).replace(/_api\.json$/, '');
+async function detectComfy() {
+  try {
+    const ctl = new AbortController(); setTimeout(() => ctl.abort(), 4000);
+    const r = await fetch('/api/status', { signal: ctl.signal });
+    status = await r.json();
+    const ready = s => status.routes[s].find(x => x.ready);
+    comfyOK = !!ready('portrait');
+    if (!comfyOK) throw 0;
+    $('#cDot').className = 'dot ok';
+    $('#cTxt').textContent = ROUTE_LABEL(ready('portrait').route).split(' · ')[0] + ' connected';
+  } catch (e) {
+    comfyOK = false;
+    $('#cDot').className = 'dot warn';
+    $('#cTxt').textContent = status ? 'No Comfy route ready: set COMFY_API_KEY or start ComfyUI' : 'Preview mode: in-browser filter (run server.py for ComfyUI)';
+  }
+}
+const MODEL_NAME = r => /flux-3/.test(r) ? 'FLUX 3' : /kontext|portrait/.test(r) ? 'FLUX Kontext' : /lora/.test(r) ? 'LTX-2 + LoRA' : /ltx/.test(r) ? 'LTX 2.5' : 'LTX-Video';
+function toDataURL(blob) { return new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); }
+async function forgeJob(stage, blob, onNote, extra = {}) {
+  const r = await fetch('/api/forge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stage, image: blob ? await toDataURL(blob) : undefined, ...extra }) });
+  const { job, error } = await r.json();
+  if (!job) throw new Error(error || 'server refused job');
+  let lastRoute = null;
+  while (true) {
+    await sleep(1500);
+    const j = await (await fetch('/api/jobs/' + job)).json();
+    if (j.route && j.route !== lastRoute && (j.tried || []).some(t => t.error && t.route === lastRoute)) toast('Route failed, switched to ' + ROUTE_LABEL(j.route));
+    lastRoute = j.route || lastRoute;
+    if (onNote) onNote(j);
+    if (j.status === 'done') return { url: '/api/media/' + job, route: j.route, plate: j.plate, mime: j.mime };
+    if (j.status === 'error') throw new Error(j.note);
+  }
+}
+
+/* ---------- image helpers ---------- */
+function loadImg(src) {
+  return new Promise((res, rej) => { const i = new Image(); if (/^https?:/.test(src)) i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => rej(new Error('image load failed')); i.src = src; });
+}
+function squareCanvas(img, S = 512, bias = 0.22) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height, side = Math.min(w, h);
+  const sx = (w - side) / 2, sy = (h - side) * bias;
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  c.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, S, S);
+  return c;
+}
+function normalizedBlob(img, max = 1024) {
+  const w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return new Promise(r => c.toBlob(r, 'image/png'));
+}
+/* In-browser "anime-ish" toon filter: smooth, posterize, ink edges, rim tint. Preview only. */
+function toonify(img) {
+  const S = 384, c = squareCanvas(img, S), x = c.getContext('2d');
+  const d = x.getImageData(0, 0, S, S), p = d.data, N = S * S;
+  let a = new Float32Array(N * 3), b = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) { a[i*3] = p[i*4]; a[i*3+1] = p[i*4+1]; a[i*3+2] = p[i*4+2]; }
+  for (let pass = 0; pass < 3; pass++) {
+    for (let y = 0; y < S; y++) for (let X = 0; X < S; X++) {
+      let r = 0, g = 0, bl = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const yy = y + dy, xx = X + dx; if (yy < 0 || xx < 0 || yy >= S || xx >= S) continue;
+        const k = (yy * S + xx) * 3; r += a[k]; g += a[k+1]; bl += a[k+2]; n++;
+      }
+      const k = (y * S + X) * 3; b[k] = r / n; b[k+1] = g / n; b[k+2] = bl / n;
+    }
+    [a, b] = [b, a];
+  }
+  const L = new Float32Array(N);
+  for (let i = 0; i < N; i++) L[i] = .299 * a[i*3] + .587 * a[i*3+1] + .114 * a[i*3+2];
+  const lv = 6;
+  for (let y = 0; y < S; y++) for (let X = 0; X < S; X++) {
+    const i = y * S + X;
+    let e = 0;
+    if (y > 0 && X > 0 && y < S - 1 && X < S - 1) {
+      const gx = -L[i-S-1] - 2*L[i-1] - L[i+S-1] + L[i-S+1] + 2*L[i+1] + L[i+S+1];
+      const gy = -L[i-S-1] - 2*L[i-S] - L[i-S+1] + L[i+S-1] + 2*L[i+S] + L[i+S+1];
+      e = Math.hypot(gx, gy);
+    }
+    let r = a[i*3], g = a[i*3+1], bl = a[i*3+2];
+    const m = (r + g + bl) / 3;               // saturation boost
+    r = m + (r - m) * 1.45; g = m + (g - m) * 1.45; bl = m + (bl - m) * 1.45;
+    r = Math.round(r / 255 * lv) / lv * 255; g = Math.round(g / 255 * lv) / lv * 255; bl = Math.round(bl / 255 * lv) / lv * 255;
+    const lum = L[i] / 255;                   // violet shadows, cyan highlights
+    if (lum < .35) { r = r * .85 + 18; bl = bl * .9 + 30; }
+    else if (lum > .7) { g += 6; bl += 14; }
+    if (e > 70) { const k = clamp((e - 70) / 90, 0, 1); r = r * (1 - k) + 22 * k; g = g * (1 - k) + 16 * k; bl = bl * (1 - k) + 44 * k; }
+    p[i*4] = clamp(r, 0, 255); p[i*4+1] = clamp(g, 0, 255); p[i*4+2] = clamp(bl, 0, 255);
+  }
+  x.putImageData(d, 0, 0);
+  const gr = x.createLinearGradient(0, 0, S, 0);  // rim light
+  gr.addColorStop(0, 'rgba(124,92,255,.22)'); gr.addColorStop(.25, 'rgba(0,0,0,0)'); gr.addColorStop(.75, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(56,214,255,.22)');
+  x.globalCompositeOperation = 'screen'; x.fillStyle = gr; x.fillRect(0, 0, S, S); x.globalCompositeOperation = 'source-over';
+  return c;
+}
+function guestAvatar() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d');
+  const bg = x.createRadialGradient(S/2, S/2, 40, S/2, S/2, S/1.2); bg.addColorStop(0, '#2a1f63'); bg.addColorStop(1, '#0a0818');
+  x.fillStyle = bg; x.fillRect(0, 0, S, S);
+  x.fillStyle = '#141026'; x.beginPath(); x.moveTo(90, S); x.quadraticCurveTo(S/2, 330, S - 90, S); x.fill();     // coat
+  x.strokeStyle = '#38d6ff'; x.lineWidth = 6; x.beginPath(); x.moveTo(S/2, 360); x.lineTo(S/2, S); x.stroke();
+  x.fillStyle = '#e8c3a8'; x.beginPath(); x.ellipse(S/2, 250, 96, 116, 0, 0, Math.PI*2); x.fill();          // face
+  x.fillStyle = '#17122c'; x.beginPath();                                                                     // hair
+  x.moveTo(140, 250); x.lineTo(150, 150); x.lineTo(200, 175); x.lineTo(215, 100); x.lineTo(260, 150); x.lineTo(300, 90); x.lineTo(320, 165); x.lineTo(370, 140); x.lineTo(372, 250); x.quadraticCurveTo(330, 190, 256, 185); x.quadraticCurveTo(180, 190, 140, 250); x.fill();
+  for (const ex of [212, 300]) { x.fillStyle = '#fff'; x.beginPath(); x.ellipse(ex, 262, 22, 15, 0, 0, Math.PI*2); x.fill(); x.fillStyle = '#38d6ff'; x.shadowColor = '#38d6ff'; x.shadowBlur = 18; x.beginPath(); x.arc(ex, 263, 10, 0, Math.PI*2); x.fill(); x.shadowBlur = 0; }
+  x.strokeStyle = '#7a4a3a'; x.lineWidth = 4; x.beginPath(); x.moveTo(236, 320); x.quadraticCurveTo(256, 330, 278, 320); x.stroke();
+  return c;
+}
+
+/* ---------- canvas + state ---------- */
+const cv = $('#cv'), g = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px'; g.setTransform(DPR, 0, 0, DPR, 0, 0); }
+addEventListener('resize', resize); resize();
+
+const isTouch = matchMedia('(pointer: coarse)').matches;
+let mode = 'menu', T = 0, last = performance.now();
+let hunterName = 'Hunter', portrait = null, selfieImg = null, clipURL = null, clipIsVideo = false, clipPlate = false, clipPromise = null, usedComfy = false;
+const routesUsed = {};
+let trailer = null;
+let P = null, S = null, enemies = [], shards = [], parts = [], texts = [], slashes = [];
+
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+function toast(msg, ms = 3500) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', ms); }
+function gatePos() { return { x: W / 2, y: W < 560 ? Math.max(190, H * .27) : Math.max(130, H * .22) }; }
+function gateScale() { return clamp(Math.min(W, H) / 640, .7, 1.25); }
+
+/* ---------- start / forge ---------- */
+$('#bSelfie').onclick = () => $('#fileIn').click();
+$('#bGuest').onclick = () => { personalSprites = null; window.resetHunterSprites && window.resetHunterSprites(); hunterName = $('#nameIn').value.trim() || 'Guest Hunter'; portrait = guestAvatar(); usedComfy = false; clipURL = null; beginIntro(); };
+$('#fileIn').onchange = e => { const f = e.target.files[0]; if (f) forge(f); e.target.value = ''; };
+
+function setStep(n, state, note) {
+  const li = $('#st' + n); li.className = state;
+  if (note !== undefined) { let s = li.querySelector('small'); if (!s) { s = document.createElement('small'); li.lastElementChild.appendChild(s); } s.textContent = note; }
+}
+function drawThumb(id, src) { const c = $(id), x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); if (src) x.drawImage(src, 0, 0, c.width, c.height); }
+
+async function forge(file) {
+  hunterName = $('#nameIn').value.trim() || 'Hunter';
+  show('sForge'); $('#bEnter').disabled = true; $('#forgeNote').textContent = '';
+  $('#hunterThumb').classList.remove('hunter-glow');
+  personalSprites = null; forgeMoveset.cur = null; window.resetHunterSprites && window.resetHunterSprites();
+  clipURL = null; clipPromise = null; clipPlate = false; usedComfy = false; trailer = null; delete routesUsed.portrait; delete routesUsed.clip;
+  ['1','2','3','4'].forEach(n => setStep(n, ''));
+  setStep(4, '', 'Full-body moveset · LTX-2 on Comfy Cloud');
+  setStep(2, '', 'FLUX 3 image edit'); setStep(3, '', '3-shot trailer · FLUX 3 keyframes + LTX-2 + LoRA');
+  drawThumb('#hunterThumb', null);
+  setStep(1, 'run');
+  try { selfieImg = await loadImg(URL.createObjectURL(file)); }
+  catch (e) { toast('Could not read that photo. Try a JPG or PNG.'); show('sStart'); return; }
+  drawThumb('#selfieThumb', squareCanvas(selfieImg, 240));
+  setStep(1, 'done');
+
+  let hunter = null;
+  if (comfyOK) {
+    try {
+      setStep(2, 'run', 'Starting');
+      const res = await forgeJob('portrait', await normalizedBlob(selfieImg), j => setStep(2, 'run', ROUTE_LABEL(j.route) + (j.note && j.note.includes(' · ') ? ' · ' + j.note.split(' · ').pop() : '')));
+      hunter = await loadImg(res.url); usedComfy = true; routesUsed.portrait = res.route;
+      setStep(2, 'done', 'Forged with ' + ROUTE_LABEL(res.route));
+      // The trailer renders in the background so the player can start right away:
+      // shot 1 animates the portrait; shots 2-3 get FLUX 3 keyframes first; all run in parallel.
+      const hunterBlob = await (await fetch(res.url)).blob();
+      forgeMoveset(hunterBlob);
+      const spec = await fetch('/workflows/trailer.json').then(r => r.json());
+      trailer = { spec, shots: spec.shots.map(() => null), narration: null, blob: null };
+      const n = spec.shots.length, count = () => trailer.shots.filter(Boolean).length;
+      const note = () => setStep(3, 'run', 'Directing your trailer · ' + count() + '/' + n + ' shots · LTX-2 + LoRA · keep playing');
+      note();
+      forgeJob('voice', null, null, { name: hunterName }).then(v => { trailer.narration = v.url; }).catch(e => console.warn('narration', e));
+      clipPromise = Promise.allSettled(spec.shots.map(async (sh, i) => {
+        let src = hunterBlob;
+        if (sh.keyframe) src = await (await fetch((await forgeJob('keyframe', hunterBlob, null, { shot: i })).url)).blob();
+        const c = await forgeJob('clip', src, null, { shot: i });
+        trailer.shots[i] = c; note();
+        if (i === 0) { clipURL = c.url; clipIsVideo = /^video/.test(c.mime || ''); clipPlate = !!c.plate; routesUsed.clip = c.route; }
+        // finishing pass: upscale to 1056x1920 (FLUX Video Upscale); saved trailer/Reel use it once it lands
+        const mine = trailer;
+        fetch(c.url).then(r => r.blob()).then(b => forgeJob('upscale', b)).then(u => { if (trailer === mine) { mine.shots[i] = { ...c, url: u.url, upscaled: true }; mine.blob = null; } }).catch(e => console.warn('upscale skipped', e));
+      })).then(() => {
+        if (!count()) return setStep(3, 'fail', 'Trailer skipped: no clip route worked');
+        setStep(3, 'done', 'Your trailer is ready · ' + count() + ' shots · ' + ROUTE_LABEL(routesUsed.clip));
+        if (mode === 'play') { sysMsg('[SYSTEM] Your trailer is ready.'); AK.vo('vo_clip_ready'); }
+        if (mode === 'end') showEndButtons();
+      });
+    } catch (err) {
+      setStep(2, 'fail', 'Every Comfy route failed · using preview filter');
+      console.warn(err);
+      setStep(3, 'skip', 'Skipped');
+    }
+  }
+  if (!hunter) {
+    if (!comfyOK) { setStep(2, 'run', 'Preview filter (ComfyUI makes the real anime version)'); await sleep(700); }
+    hunter = toonify(selfieImg);
+    setStep(2, 'done', comfyOK ? 'Preview filter used' : 'Preview filter (ComfyUI makes the real anime version)');
+    if (!comfyOK) { setStep(3, 'skip', 'Needs server.py with a Comfy route'); setStep(4, 'skip', 'Default hunter in preview mode'); }
+  }
+  portrait = squareCanvas(hunter, 512);
+  drawThumb('#hunterThumb', portrait); $('#hunterThumb').classList.add('hunter-glow');
+  $('#forgeTitle').textContent = 'Hunter ' + hunterName + ' is ready';
+  $('#bEnter').disabled = false;
+}
+$('#bEnter').onclick = () => { AK.init(); if (trailer && trailer.shots.some(Boolean) && !clipPlate) playTrailer(beginIntro); else if (clipURL) playClip(beginIntro); else beginIntro(); };
+/* ---------- your hunter, full body: FLUX 3 keyframe -> LTX-2 moves -> keyed sprite sheets ---------- */
+var personalSprites = null;   // var: visible to world3d.js as window.personalSprites
+async function forgeMoveset(hunterBlob) {
+  const mine = Symbol(); forgeMoveset.cur = mine;
+  try {
+    setStep(4, 'run', 'Drawing your full body · FLUX 3');
+    const ms = await fetch('/workflows/moveset.json').then(r => r.json()), moves = ms.characters.hunter.moves;
+    const body = await forgeJob('body', hunterBlob, null, { char: 'hunter' });
+    const bodyBlob = await (await fetch(body.url)).blob();
+    let done = 0; const names = Object.keys(moves);
+    setStep(4, 'run', 'Animating ' + names.length + ' moves · LTX-2 · 0/' + names.length);
+    const got = (await Promise.allSettled(names.map(m => forgeJob('move', bodyBlob, null, { char: 'hunter', move: m })
+      .then(r => { setStep(4, 'run', 'Animating ' + names.length + ' moves · LTX-2 · ' + (++done) + '/' + names.length); return [m, r.url]; }))))
+      .filter(r => r.status === 'fulfilled').map(r => r.value);
+    if (forgeMoveset.cur !== mine) return;
+    if (!got.length) throw new Error('no moves rendered');
+    setStep(4, 'run', 'Keying and baking sprite sheets');
+    const set = { anims: {}, anchor: null };
+    const baked = await Promise.all(got.map(([m, url]) => bakeMove(url, moves[m]).then(b => [m, b]).catch(e => (console.warn('bake', m, e), null))));
+    for (const r of baked.filter(Boolean)) { const [m, b] = r; set.anims[m] = b.anim; if (!set.anchor || m === 'idle') set.anchor = b.anchor; }
+    if (!Object.keys(set.anims).length) throw new Error('could not bake moves');
+    personalSprites = set;
+    if (window.setHunterSprites) window.setHunterSprites(set);
+    setStep(4, 'done', 'Your hunter moves like you · ' + got.length + ' LTX-2 moves');
+    if (mode === 'play') { sysMsg('[SYSTEM] Hunter form synchronized.'); S.flash = .8; burst(P.x, P.y, '#38d6ff', 40, 260); AK.play('levelup', .8); }
+  } catch (e) { console.warn('moveset', e); setStep(4, 'fail', 'Using the default hunter body: ' + String(e.message || e).slice(0, 80)); }
+}
+// same idea as tools/bake_sprites.py, in the browser: key the green, trim the still frames LTX holds, tile into a sheet
+async function bakeMove(url, spec) {
+  const FW = 192, FH = 288, FPS = 12, COLS = 8, maxf = spec.maxf || 16;
+  const v = document.createElement('video'); v.src = url; v.muted = true; v.playsInline = true; v.preload = 'auto';
+  await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('move video failed')); });
+  const c = document.createElement('canvas'); c.width = FW; c.height = FH; const x = c.getContext('2d', { willReadFrequently: true });
+  // capture decoded frames during playback (seeking in a loop can return stale frames), then resample to FPS
+  const caps = [];
+  await new Promise(res => {
+    const grab = (now, meta) => { x.drawImage(v, 0, 0, FW, FH); caps.push([meta ? meta.mediaTime : v.currentTime, x.getImageData(0, 0, FW, FH)]); if (!v.ended) step(); };
+    const step = () => v.requestVideoFrameCallback ? v.requestVideoFrameCallback(grab) : requestAnimationFrame(() => grab(0, null));
+    v.onended = res; v.playbackRate = 1; step(); v.play().catch(res); setTimeout(res, (v.duration + 2) * 1000);
+  });
+  if (!caps.length) throw new Error('no frames decoded');
+  const n = Math.max(1, Math.floor(v.duration * FPS)), frames = [];
+  for (let i = 0, j = 0; i < n; i++) { const t = i / FPS; while (j < caps.length - 1 && Math.abs(caps[j + 1][0] - t) <= Math.abs(caps[j][0] - t)) j++; frames.push(new ImageData(new Uint8ClampedArray(caps[j][1].data), FW, FH)); }
+  const d0 = frames[0].data, k = [0, 0, 0]; let kn = 0;
+  for (const [cx, cy] of [[3, 3], [FW - 9, 3], [3, FH - 9], [FW - 9, FH - 9]]) for (let yy = 0; yy < 6; yy++) for (let xx = 0; xx < 6; xx++) { const o = ((cy + yy) * FW + cx + xx) * 4; k[0] += d0[o]; k[1] += d0[o + 1]; k[2] += d0[o + 2]; kn++; }
+  const kr = k[0] / kn, kg = k[1] / kn, kb = k[2] / kn, kd = kg - Math.max(kr, kb);
+  for (const f of frames) { const p = f.data;
+    for (let o = 0; o < p.length; o += 4) {
+      const r = p[o], g = p[o + 1], b = p[o + 2], m = Math.max(r, b), d = g - m;
+      const near = Math.abs(r - kr) + Math.abs(g - kg) + Math.abs(b - kb);
+      let a = d <= kd * .25 ? 1 : d >= kd * .55 && near < 140 ? 0 : 1 - (d - kd * .25) / (kd * .3);
+      a = Math.max(0, Math.min(1, a));
+      if (d > 0) p[o + 1] = m + d * .15;                    // despill
+      p[o + 3] = Math.round(a * 255);
+    } }
+  // trim the static lead-in and keep the moving part
+  const sig = f => { const out = []; for (let yy = 0; yy < FH; yy += 12) for (let xx = 0; xx < FW; xx += 12) { const o = (yy * FW + xx) * 4; out.push(f.data[o + 1], f.data[o + 3]); } return out; };
+  const sigs = frames.map(sig), diff = sigs.map((s1, i) => i ? s1.reduce((t, v2, j) => t + Math.abs(v2 - sigs[i - 1][j]), 0) / s1.length : 0);
+  const thr = Math.max(1, .2 * Math.max(...diff)), moving = diff.map((v2, i) => v2 > thr ? i : -1).filter(i => i >= 0);
+  let a = moving.length ? Math.max(0, moving[0] - 1) : 0, b = moving.length ? Math.min(n - 1, moving[moving.length - 1] + (spec.loop ? 1 : 3)) : n - 1;
+  if (b - a + 1 > maxf) { if (spec.loop) a = b - maxf + 1; b = Math.min(b, a + maxf - 1); }
+  const sel = frames.slice(a, b + 1), rows = Math.ceil(sel.length / COLS);
+  const atlas = document.createElement('canvas'); atlas.width = COLS * FW; atlas.height = rows * FH; const ax = atlas.getContext('2d');
+  sel.forEach((f, i) => ax.putImageData(f, (i % COLS) * FW, Math.floor(i / COLS) * FH));
+  let top = FH, foot = 0, l = FW, rr = 0;
+  for (const f of sel.filter((_, i) => i % 3 === 0)) for (let yy = 0; yy < FH; yy++) for (let xx = 0; xx < FW; xx += 2) if (f.data[(yy * FW + xx) * 4 + 3] > 128) { top = Math.min(top, yy); foot = Math.max(foot, yy); l = Math.min(l, xx); rr = Math.max(rr, xx); }
+  return { anim: { canvas: atlas, cols: COLS, rows, n: sel.length, loop: !!spec.loop }, anchor: { top: top / FH, foot: foot / FH, cx: (l + rr) / 2 / FW } };
+}
+function trailerSegments(endLine) {
+  const segs = [{ type: 'card', dur: 1.7, text: 'A GATE HAS OPENED', sub: '[ SYSTEM ]', sfx: 'riser' }];
+  trailer.shots.forEach((c, i) => { if (!c) return; const sh = trailer.spec.shots[i];
+    segs.push({ type: 'video', src: c.url, use: sh.use, card: sh.card.replace('{NAME}', hunterName.toUpperCase()), sfx: segs.length === 1 ? 'gate_open' : segs.length === 2 ? 'braam' : 'whoosh', flash: segs.length > 1 }); });
+  segs.push({ type: 'end', dur: 2.8, portrait, line: endLine || 'HUNTER ' + hunterName.toUpperCase(), sfx: 'braam' });
+  return segs;
+}
+async function playTrailer(after) {
+  try { const blob = await Director.play({ layer: $('#clipLayer'), segments: trailerSegments(), narration: trailer.narration, record: true }); if (blob) trailer.blob = blob; }
+  catch (e) { console.warn('trailer', e); $('#clipLayer').classList.remove('on'); }
+  after();
+}
+function playClip(after) {
+  const L = $('#clipLayer'); L.querySelectorAll('img,video,.plateHunter').forEach(n => n.remove());
+  let el, done = false; const fin = () => { if (done) return; done = true; if (el.pause) el.pause(); L.classList.remove('on'); after(); };
+  if (clipIsVideo) {
+    el = document.createElement('video'); el.src = clipURL; el.playsInline = true; el.onended = fin;
+    el.play().catch(() => { el.muted = true; el.play().catch(fin); });   // LTX-2 clips carry audio; fall back to muted if blocked
+    setTimeout(fin, 22000);
+  } else { el = document.createElement('img'); el.src = clipURL; setTimeout(fin, 4600); }
+  L.prepend(el);
+  if (clipPlate && portrait) {   // Router LTX is text-only: composite the hunter in front of the LTX Gate plate
+    const h = document.createElement('img'); h.className = 'plateHunter'; h.src = portrait.toDataURL(); L.appendChild(h);
+  }
+  L.classList.add('on'); $('#skip').onclick = fin;
+}
+/* ---------- run setup ---------- */
+function beginIntro() {
+  show(''); mode = 'intro'; T = 0;
+  const gp = gatePos();
+  P = { x: W / 2, y: Math.min(H - 80, gp.y + 170), vx: 0, vy: 0, r: 20, hp: 5, inv: 0, dash: 0, dashCD: 0, atk: 0, face: 1, lvl: 1, xp: 0, flash: 0,
+        state: 'free', st: 0, step: 0, buf: false, comboT: 0, sp: 0, hitDone: false, anim: { name: 'idle', t: 0 } };
+  enemies = []; shards = []; parts = []; texts = []; slashes = [];
+  S = { score: 0, kills: 0, time: 0, spawn: 1.2, boss: false, shake: 0, msg: '', msgT: 0, elapsed: 0, combo: 0, comboT: 0, maxCombo: 0, tele: [], hits: 0, pickups: [],
+        gate: 0, phase: 'break', breakT: 2.2, toSpawn: 0, brutes: 0 };
+  P.weapon = null;
+  sysMsg('[SYSTEM] A Gate has opened.');
+  AK.play('gate_open', .8); setTimeout(() => AK.vo('vo_gate_open'), 600); AK.music(.32);
+}
+function startPlay() { mode = 'play'; document.querySelectorAll('.tbtn').forEach(b => b.style.display = isTouch ? 'block' : 'none'); GameRec.start(7, 'opener'); }
+function sysMsg(m) { if (S) { S.msg = m; S.msgT = 2.6; } }
+
+/* ---------- input ---------- */
+const keys = {};
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase(); if (e.repeat) return; keys[k] = true;
+  if (mode !== 'play') return;
+  if (k === ' ' || k === 'k' || k === 'shift') { e.preventDefault(); tryDash(); }
+  else if (k === 'j' || k === 'enter') tryAttack();
+  else if (k === 'l' || k === 'e') trySpecial();
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+let joy = null;
+cv.addEventListener('pointerdown', e => {
+  if (mode !== 'play') return;
+  if (e.pointerType === 'mouse') { if (e.button === 2) trySpecial(); else tryAttack(); return; }   // mouse: click attacks, WASD moves
+  if (!joy) joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY };
+});
+cv.addEventListener('pointermove', e => { if (joy && joy.id === e.pointerId) { joy.x = e.clientX; joy.y = e.clientY; } });
+const endJoy = e => { if (joy && joy.id === e.pointerId) joy = null; };
+cv.addEventListener('pointerup', endJoy); cv.addEventListener('pointercancel', endJoy);
+cv.addEventListener('contextmenu', e => e.preventDefault());
+$('#dashBtn').addEventListener('pointerdown', e => { e.stopPropagation(); tryDash(); });
+$('#atkBtn').addEventListener('pointerdown', e => { e.stopPropagation(); tryAttack(); });
+$('#spBtn').addEventListener('pointerdown', e => { e.stopPropagation(); trySpecial(); });
+
+/* ---------- combat ---------- */
+const ANIM = (o, name, t, p) => { o.name = name; o.t = t; o.p = p; return o; };   // mutate in place: no per-frame allocation
+// three-hit katana combo; timings in seconds, ranges in pixels (K px = 1 world unit)
+const COMBO = {
+  1: { dur: .30, hit: .10, range: 100, depth: 55, dmg: 1, kb: 210, stun: .32, lunge: 160 },
+  2: { dur: .30, hit: .10, range: 100, depth: 55, dmg: 1, kb: 230, stun: .32, lunge: 160 },
+  3: { dur: .46, hit: .17, range: 130, depth: 65, dmg: 2, kb: 470, stun: .7, lunge: 240, launch: 560 },
+};
+// weapon power-ups (Zombies-box style drops): stats, look and sound change; animations stay the katana moveset
+const WEAPONS = {
+  flame:   { name: 'FLAME KATANA',          color: '#ff7a45', dmg: 1,   speed: 1,    range: 1.1,  kb: 1,   burn: 2.2, dur: 22 },
+  thunder: { name: 'THUNDER BLADE',         color: '#ffe66a', dmg: 1,   speed: .95,  range: 1.45, kb: 1.1, chain: 2,   dur: 22 },
+  twin:    { name: 'SHADOW TWIN DAGGERS',   color: '#b18cff', dmg: 1,   speed: .62,  range: .85,  kb: .7,  twin: true, dur: 22 },
+  cleaver: { name: "SOVEREIGN'S CLEAVER",   color: '#ffd84a', dmg: 3,   speed: 1.45, range: 1.55, kb: 1.9, dur: 30 },
+};
+const WPN = () => P.weapon ? WEAPONS[P.weapon.kind] : null;
+const atkSpeed = () => Math.max(.5, Math.pow(.95, P.lvl - 1) * (WPN() ? WPN().speed : 1));
+function dropWeapon(x, y, kind) {
+  kind = kind || ['flame', 'thunder', 'twin'][Math.floor(Math.random() * 3)];
+  S.pickups.push({ x: clamp(x, 40, W - 40), y: clamp(y, 80, H - 40), kind, t: 0 });
+}
+function equipWeapon(kind) {
+  const w = WEAPONS[kind]; P.weapon = { kind, t: w.dur };
+  sysMsg('[SYSTEM] Weapon acquired: ' + w.name); floatText(P.x, P.y - 70, w.name, w.color);
+  S.flash = .5; burst(P.x, P.y, w.color, 40, 260); AK.play('levelup', .8); AK.play('braam', .5);
+}
+function nearestEnemy(maxD) { let best = null, bd = maxD; for (const e of enemies) { const d = Math.hypot(e.x - P.x, (e.y - P.y) * 1.4); if (d < bd) { bd = d; best = e; } } return best; }
+function startAttack(step) {
+  const t = nearestEnemy(230);
+  if (t) { if (Math.abs(t.x - P.x) > 6) P.face = Math.sign(t.x - P.x); P.y += clamp(t.y - P.y, -40, 40) * .5; }   // aim assist
+  Object.assign(P, { state: 'atk', step, st: 0, buf: false, hitDone: false });
+  slashes.push({ x: P.x, y: P.y, face: P.face, step, ang: P.face > 0 ? 0 : Math.PI, life: .22, max: .22, delay: COMBO[step].hit * atkSpeed(), color: WPN() && WPN().color });
+  AK.play('slash', step === 3 ? .7 : .45, step === 3 ? .8 : rand(.95, 1.15));
+}
+function tryAttack() {
+  if (!P || mode !== 'play') return;
+  if (P.state === 'free') startAttack(P.comboT > 0 && P.step < 3 ? P.step + 1 : 1);
+  else if (P.state === 'atk') P.buf = true;
+  else if (P.state === 'dash' && P.st > .06) startAttack(3);          // dash-cancel into the heavy finisher
+}
+function tryDash() {
+  if (!P || P.dashCD > 0 || mode !== 'play' || P.state === 'sp') return;
+  let dx = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0), dy = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
+  if (joy) { dx = joy.x - joy.ox; dy = joy.y - joy.oy; }
+  const m = Math.hypot(dx, dy); if (m < .1) { dx = P.face; dy = 0; } else { dx /= m; dy /= m; }
+  if (Math.abs(dx) > .2) P.face = Math.sign(dx);
+  Object.assign(P, { state: 'dash', st: 0, ddx: dx, ddy: dy, dash: .2 }); P.dashCD = .55; P.inv = Math.max(P.inv, .28);
+  AK.play('dash', .6); burst(P.x, P.y, '#38d6ff', 16, 180);
+}
+function trySpecial() {
+  if (!P || mode !== 'play' || P.sp < 100 || P.state === 'sp') return;
+  Object.assign(P, { state: 'sp', st: 0, sp: 0, hitDone: false }); P.inv = 1.4;
+  S.cine = { t: 0, dur: 1.5, slow: .75, title: 'GATE SLASH', sub: hunterName.toUpperCase() };
+  AK.play('riser', .7); AK.play('gate_open', .5);
+}
+function hitEnemy(e, dmg, kb, stun, launch, face) {
+  const boss = e.type === 'boss', brute = e.type === 'brute';
+  e.hp -= dmg; e.hit = .12; e.lastHit = S.elapsed;
+  if (!boss || stun > 1) { e.stun = boss ? .25 : stun * (brute ? .6 : 1); e.state = 'stun'; e.st = 0; S.tele = S.tele.filter(t => t.owner !== e); }
+  e.vx += face * kb * (boss ? .12 : brute ? .5 : 1);
+  if (launch && !boss) e.vz = launch * (brute ? .45 : 1);
+  S.combo++; S.comboT = 1.8; S.maxCombo = Math.max(S.maxCombo, S.combo); S.hits++;
+  P.sp = Math.min(100, P.sp + (boss ? 4 : 6));
+  const crit = dmg >= 2; floatText(e.x, e.y - e.r - 10, (crit ? '' : '') + dmg * 37 + (crit ? '!' : ''), crit ? '#ffd84a' : '#eef0ff');
+  burst(e.x, e.y - 10, '#ffffff', crit ? 14 : 7, crit ? 260 : 160); burst(e.x, e.y - 10, '#38d6ff', 6, 200);
+}
+function doComboHit(m) {
+  const w = WPN(), range = m.range * (w ? w.range : 1), dmg = Math.max(1, Math.round(m.dmg * (w ? w.dmg : 1))), kb = m.kb * (w ? w.kb : 1);
+  let any = false; const struck = [];
+  for (const e of enemies) {
+    const dx = e.x - P.x;
+    if (dx * P.face < -12 || Math.abs(dx) > range + e.r || Math.abs(e.y - P.y) > m.depth + e.r * .5) continue;
+    hitEnemy(e, dmg, kb, m.stun, m.launch, P.face); any = true; struck.push(e);
+    if (w && w.twin) hitEnemy(e, 1, 0, m.stun, 0, P.face);
+    if (w && w.burn) e.burn = w.burn;
+    if (w) burst(e.x, e.y - 10, w.color, 10, 220);
+  }
+  if (w && w.chain && struck.length) {          // chain lightning to nearby shadows
+    let from = struck[0];
+    for (let c = 0; c < w.chain; c++) {
+      const next = enemies.filter(e => !struck.includes(e) && e.hp > 0).sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y))[0];
+      if (!next || Math.hypot(next.x - from.x, next.y - from.y) > 190) break;
+      for (let i = 0; i <= 8; i++) parts.push({ x: from.x + (next.x - from.x) * i / 8 + rand(-6, 6), y: from.y + (next.y - from.y) * i / 8 + rand(-6, 6), vx: 0, vy: 0, life: .25, max: .25, c: '#ffe66a', s: 4 });
+      hitEnemy(next, 1, 120, .3, 0, Math.sign(next.x - from.x) || 1); struck.push(next); from = next;
+    }
+  }
+  if (w && w.kb > 1.5 && any) { S.shake = 14; S.stop = .09; }
+  if (any) { AK.play('hit', .65, rand(.85, 1.1)); S.stop = m.launch ? .1 : .05; S.shake = m.launch ? 10 : 5; }
+}
+function doSpecialHit() {
+  for (const e of enemies) {
+    const dx = e.x - P.x;
+    if (dx * P.face < -60 || Math.abs(dx) > 560 || Math.abs(e.y - P.y) > 240) continue;
+    hitEnemy(e, e.type === 'boss' ? 9 : 6, 650, 1.2, 620, P.face);
+  }
+  slashes.push({ x: P.x + P.face * 120, y: P.y, face: P.face, step: 1, big: true, ang: P.face > 0 ? 0 : Math.PI, life: .5, max: .5 });
+  S.flash = 1; S.shake = 26; S.stop = .16; AK.play('braam', 1); AK.play('slash', 1, .6);
+  for (let i = 0; i < 4; i++) burst(P.x + P.face * (80 + i * 110), P.y - 20, i % 2 ? '#b18cff' : '#38d6ff', 26, 320);
+}
+function enemyAttackHits(e) {   // returns true if this enemy's active attack connects with the player
+  const dx = P.x - e.x, dy = P.y - e.y;
+  if (e.type === 'imp') return Math.hypot(dx, dy * 1.3) < e.r + P.r + 14;
+  if (e.type === 'brute') return Math.hypot(P.x - (e.x + e.face * 40), dy * 1.3) < 88;
+  return (dx * e.face > -30 && Math.abs(dx) < 240 && Math.abs(dy) < 70) || Math.hypot(dx, dy) < 90;   // boss cleave
+}
+function hurtPlayer(from) {
+  if (P.inv > 0 || P.state === 'dash') return;
+  P.hp--; P.inv = 1; P.flash = .3; S.shake = 14; S.stop = .08; S.combo = 0;
+  Object.assign(P, { state: 'hurt', st: 0 }); P.vx = Math.sign(P.x - from.x || 1) * 380;
+  burst(P.x, P.y, '#ff4d6d', 20, 220); AK.play('hurt', .9);
+  if (P.hp <= 0) finish(false);
+}
+
+/* ---------- fx ---------- */
+function burst(x, y, c, n = 10, sp = 140) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = rand(.3, 1) * sp; parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rand(.3, .7), max: .7, c, s: rand(1.5, 3.5) }); } }
+function floatText(x, y, txt, c = '#fff') { texts.push({ x, y, txt, c, life: .9 }); }
+
+/* ---------- spawning ---------- */
+function spawnEnemy(type) {
+  const gp = gatePos(); let x, y;
+  if (Math.random() < .7 || type === 'boss') { x = gp.x + rand(-30, 30); y = gp.y + rand(-20, 30); }
+  else { const side = Math.floor(Math.random() * 4); x = side === 0 ? -20 : side === 1 ? W + 20 : rand(0, W); y = side === 2 ? -20 : side === 3 ? H + 20 : rand(0, H); }
+  const t = S.elapsed;
+  const def = type === 'boss' ? { r: 52, hp: 46, sp: 46, pts: 600, drop: 14, reach: 210, wind: .9, atk: .55, rec: .8 }
+            : type === 'brute' ? { r: 28, hp: 7, sp: 52 + t * .3, pts: 80, drop: 3, reach: 95, wind: .7, atk: .45, rec: .7 }
+            : { r: 16, hp: 2, sp: 88 + t * .8, pts: 25, drop: 1, reach: 70, wind: .38, atk: .28, rec: .5 };
+  const gN = Math.max(1, S.gate), hpK = 1 + (gN - 1) * .16, spK = Math.min(1.6, 1 + (gN - 1) * .045), windK = Math.max(.55, 1 - (gN - 1) * .035);
+  def.hp = Math.ceil(def.hp * hpK); def.sp *= spK; def.wind *= windK; def.rec *= windK; def.pts = Math.round(def.pts * (1 + (gN - 1) * .1));
+  enemies.push({ type, x, y, vx: 0, vy: 0, z: 0, vz: 0, maxhp: def.hp, ...def, hit: 0, wob: Math.random() * 6, state: 'chase', st: 0, face: -1, stun: 0, cd: rand(.3, 1.2), anim: { name: 'move', t: 0 } });
+  burst(x, y, '#7c5cff', 8, 90);
+}
+
+/* ---------- update ---------- */
+function update(rawDt) {
+  let dt = rawDt;
+  if (S && mode === 'play') {   // hit-stop and cinematic slow motion
+    if (S.stop > 0) { S.stop -= rawDt; dt = rawDt * .04; }
+    if (S.cine) { const c = S.cine; c.t += rawDt; if (c.t < c.slow) dt *= .28; if (c.t > c.dur) S.cine = null; }
+    if (S.flash > 0) S.flash -= rawDt * 2.5;
+  }
+  T += dt;
+  for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .92; p.vy *= .92; p.life -= dt; }
+  parts = parts.filter(p => p.life > 0);
+  for (const t of texts) { t.y -= 40 * dt; t.life -= dt; } texts = texts.filter(t => t.life > 0);
+  for (const s of slashes) { if (s.delay > 0) s.delay -= dt; else s.life -= dt; } slashes = slashes.filter(s => s.life > 0);
+  if (S) { S.msgT -= dt; S.shake *= .86; }
+
+  if (mode === 'intro') { if (T > 2.4) startPlay(); return; }
+  if (mode !== 'play') return;
+
+  S.elapsed += dt; S.time += dt;
+  // endless gates: fight until the wave is gone, breathe, open the next one (boss every 5th)
+  if (S.phase === 'break') {
+    S.breakT -= dt;
+    if (S.breakT <= 0) {
+      S.gate++; S.phase = 'fight'; const gN = S.gate, bossGate = gN % 5 === 0;
+      S.toSpawn = bossGate ? 4 + gN : 5 + Math.round(gN * 3.4); S.brutes = gN >= 2 ? Math.floor(gN * .7) : 0; S.spawn = .6;
+      sysMsg('[SYSTEM] Gate ' + gN + ' has opened.'); AK.play('gate_open', .7); if (gN > 1) AK.vo('vo_gate_open');
+      if (bossGate) { spawnEnemy('boss'); sysMsg('[SYSTEM] Gate ' + gN + ' · Gate Boss detected.'); S.shake = 14;
+        S.cine = { t: 0, dur: 2.8, slow: 1.8, title: 'GATE ' + gN + ' BOSS', sub: 'THE SHADOW SOVEREIGN', boss: enemies[enemies.length - 1] };
+        AK.play('boss', 1); AK.play('braam', .8); setTimeout(() => AK.vo('vo_boss'), 700); if (!S.boss) GameRec.start(9, 'boss'); S.boss = true; }
+    }
+  } else if (S.toSpawn <= 0 && !enemies.length) {
+    S.phase = 'break'; S.breakT = 4.5; const bonus = 150 * S.gate;
+    S.score += bonus; floatText(P.x, P.y - 60, 'GATE CLEAR +' + bonus, '#ffd84a');
+    if (P.hp < 5) { P.hp++; floatText(P.x, P.y - 84, '+1 ♥', '#ff4d6d'); }
+    sysMsg('[SYSTEM] Gate ' + S.gate + ' cleared.'); AK.play('win', .6); AK.vo('vo_cleared');
+    dropWeapon(W / 2 + rand(-60, 60), clamp(gatePos().y + 190, 120, H - 120));   // the Gate leaves a weapon behind
+  }
+  // player
+  P.st += dt; P.dashCD -= dt; P.inv -= dt; P.flash -= dt; P.comboT -= dt; P.dash -= dt;
+  if (S.comboT > 0) { S.comboT -= dt; if (S.comboT <= 0) S.combo = 0; }
+  let dx = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0);
+  let dy = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
+  if (joy) { const jx = joy.x - joy.ox, jy = joy.y - joy.oy, m = Math.hypot(jx, jy); if (m > 8) { dx = jx / Math.max(m, 50); dy = jy / Math.max(m, 50); } }
+  const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
+  P.moving = false;
+  if (P.state === 'free') {
+    P.x += dx * 250 * dt; P.y += dy * 210 * dt; P.moving = m > .1;
+    if (Math.abs(dx) > .15) P.face = Math.sign(dx);
+    ANIM(P.anim, P.moving ? 'run' : 'idle', T);
+  } else if (P.state === 'atk') {
+    const c = COMBO[P.step], dur = c.dur * atkSpeed();
+    if (P.st < dur * .45) P.x += P.face * c.lunge * dt * (1 - P.st / (dur * .45));
+    if (!P.hitDone && P.st >= c.hit * atkSpeed()) { P.hitDone = true; doComboHit(c); }
+    ANIM(P.anim, 'combo', 0, ((P.step - 1) + Math.min(1, P.st / dur)) / 3);
+    if (P.st >= dur) { if (P.buf && P.step < 3) startAttack(P.step + 1); else { P.state = 'free'; P.comboT = .5; } }
+  } else if (P.state === 'dash') {
+    P.x += P.ddx * 820 * dt; P.y += P.ddy * 640 * dt;
+    if (Math.random() < .9) parts.push({ x: P.x, y: P.y, vx: 0, vy: 0, life: .28, max: .28, c: '#38d6ff', s: 7 });
+    ANIM(P.anim, 'dash', 0, Math.min(1, P.st / .2) * .7 + .15);
+    if (P.st >= .2) P.state = 'free';
+  } else if (P.state === 'sp') {
+    ANIM(P.anim, 'special', 0, Math.min(1, P.st / .6));
+    if (!P.hitDone && P.st >= .3) { P.hitDone = true; doSpecialHit(); }
+    if (P.st >= .6) P.state = 'free';
+  } else if (P.state === 'hurt') {
+    P.x += P.vx * dt; P.vx *= .86; ANIM(P.anim, 'idle', 0);
+    if (P.st >= .3) P.state = 'free';
+  }
+  P.x = clamp(P.x, 24, W - 24); P.y = clamp(P.y, 50, H - 24);
+  if (P.state !== 'dash') P.dash = Math.min(P.dash, 0);
+
+  // spawns (fewer but smarter enemies)
+  S.spawn -= dt;
+  if (S.phase === 'fight' && S.toSpawn > 0 && S.spawn <= 0 && enemies.length < 8 + S.gate) {
+    const brute = S.brutes > 0 && Math.random() < .35; if (brute) S.brutes--;
+    spawnEnemy(brute ? 'brute' : 'imp'); S.toSpawn--;
+    S.spawn = Math.max(.32, 1.15 - S.gate * .06);
+  }
+
+  // enemies: chase -> wind-up (telegraph) -> attack -> recover; hits stun and juggle them
+  for (const e of enemies) {
+    e.st += dt; e.hit -= dt; e.wob += dt * 8; e.cd -= dt;
+    e.x += e.vx * dt; e.y += e.vy * dt; e.vx *= .86; e.vy *= .86;
+    e.z += e.vz * dt; e.vz -= 1700 * dt; if (e.z <= 0) { e.z = 0; e.vz = 0; }
+    const ddx = P.x - e.x, ddy = P.y - e.y, d = Math.hypot(ddx, ddy * 1.3);
+    if (e.state === 'stun') {
+      e.stun -= dt; ANIM(e.anim, e.type === 'boss' ? 'idle' : 'move', 0);
+      if (e.stun <= 0 && e.z === 0) { e.state = 'chase'; e.st = 0; }
+    } else if (e.state === 'chase') {
+      if (Math.abs(ddx) > 8) e.face = Math.sign(ddx);
+      const sp = e.sp * (d < e.reach * .8 ? .2 : 1);
+      e.x += ddx / (d || 1) * sp * dt; e.y += ddy / (d || 1) * sp * dt * .9;
+      ANIM(e.anim, e.type === 'boss' ? 'idle' : 'move', T + e.wob);
+      if (d < e.reach && e.cd <= 0) {
+        e.state = 'wind'; e.st = 0; e.face = Math.sign(ddx) || e.face;
+        if (e.type === 'boss' && Math.random() < .3 && enemies.length < 14) { e.summon = true; } else e.summon = false;
+        const tele = e.type === 'imp' ? null : e.type === 'brute' ? { kind: 'circle', x: e.x + e.face * 40, y: e.y, r: 88 } : e.summon ? null : { kind: 'rect', x: e.x, y: e.y, len: 250, wid: 140, face: e.face };
+        if (tele) S.tele.push({ ...tele, t: 0, dur: e.wind, owner: e });
+      }
+    } else if (e.state === 'wind') {
+      ANIM(e.anim, 'attack', 0, .3 * e.st / e.wind);
+      for (const t of S.tele) if (t.owner === e) t.t = e.st;
+      if (e.st >= e.wind) {
+        e.state = 'atk'; e.st = 0; e.hitDone = false; S.tele = S.tele.filter(t => t.owner !== e);
+        if (e.type === 'imp') { e.vx = e.face * 520; e.vy = ddy * 1.6; }
+        if (e.type !== 'imp') { S.shake = e.type === 'boss' ? 16 : 9; AK.play(e.type === 'boss' ? 'braam' : 'hit', e.type === 'boss' ? .7 : .9, .6); burst(e.x + e.face * 60, e.y, '#7c5cff', 26, 260); }
+        if (e.summon) { for (let i = 0; i < 3; i++) { spawnEnemy('imp'); const n = enemies[enemies.length - 1]; n.x = e.x + rand(-80, 80); n.y = e.y + rand(-60, 60); } sysMsg('[SYSTEM] The Sovereign calls its army.'); }
+      }
+    } else if (e.state === 'atk') {
+      ANIM(e.anim, 'attack', 0, .3 + .7 * Math.min(1, e.st / e.atk));
+      if (!e.hitDone && !e.summon && (e.type === 'imp' || e.st < .12) && enemyAttackHits(e)) { e.hitDone = true; hurtPlayer(e); }
+      if (e.st >= e.atk) { e.state = 'recover'; e.st = 0; }
+    } else if (e.state === 'recover') {
+      ANIM(e.anim, 'attack', 0, 1);
+      if (e.st >= e.rec) { e.state = 'chase'; e.st = 0; e.cd = rand(.6, 1.6); }
+    }
+    // soft separation from the player
+    if (d < e.r + P.r && P.state !== 'dash') { e.x -= ddx / (d || 1) * 60 * dt; e.y -= ddy / (d || 1) * 60 * dt; }
+    e.x = clamp(e.x, -30, W + 30); e.y = clamp(e.y, 30, H + 30);
+  }
+  for (const e of enemies) if (e.hp <= 0) {
+    const mult = 1 + Math.min(S.combo, 50) * .04, pts = Math.round(e.pts * mult);
+    S.kills++; S.score += pts; floatText(e.x, e.y - e.r - 28, '+' + pts, e.type === 'boss' ? '#ffd84a' : '#9fe8ff');
+    burst(e.x, e.y, e.type === 'boss' ? '#ffd84a' : '#7c5cff', e.type === 'boss' ? 70 : 18, e.type === 'boss' ? 340 : 190);
+    if (e.type === 'boss') dropWeapon(e.x, e.y, 'cleaver'); else if (e.type === 'brute' && Math.random() < .3) dropWeapon(e.x, e.y);
+    for (let i = 0; i < e.drop; i++) shards.push({ x: e.x + rand(-12, 12), y: e.y + rand(-12, 12), vx: rand(-80, 80), vy: rand(-80, 80), t: 0 });
+    S.tele = S.tele.filter(t => t.owner !== e);
+    if (e.type === 'boss') { S.shake = 20; sysMsg('[SYSTEM] Gate Boss defeated.'); S.stop = .14; S.flash = 1; S.cine = { t: 0, dur: 1.8, slow: 1.4, title: 'GATE BOSS DEFEATED', sub: hunterName.toUpperCase() }; AK.play('braam', 1); AK.play('win', .7); }
+    else if (e.type === 'brute') { S.stop = .06; AK.play('hit', .8, .7); }
+  }
+  enemies = enemies.filter(e => e.hp > 0);
+
+  // weapon pickups + timer
+  for (const pk of S.pickups) { pk.t += dt; if (Math.hypot(P.x - pk.x, (P.y - pk.y) * 1.3) < 38) { pk.got = true; equipWeapon(pk.kind); } }
+  S.pickups = S.pickups.filter(pk => !pk.got && pk.t < 20);
+  if (P.weapon && (P.weapon.t -= dt) <= 0) { P.weapon = null; sysMsg('[SYSTEM] Weapon faded.'); }
+  for (const e of enemies) if (e.burn > 0) {
+    e.burn -= dt; e.burnTick = (e.burnTick || 0) - dt;
+    if (e.burnTick <= 0) { e.burnTick = .45; e.hp -= 1; e.hit = .06; floatText(e.x, e.y - e.r - 8, '18', '#ff7a45'); burst(e.x, e.y - 10, '#ff7a45', 5, 90); }
+    if (Math.random() < .5) parts.push({ x: e.x + rand(-8, 8), y: e.y + rand(-6, 6), vx: rand(-20, 20), vy: -40, life: .4, max: .4, c: '#ff7a45', s: 3 });
+  }
+
+  // shards
+  for (const s of shards) {
+    s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= .9; s.vy *= .9;
+    const d = Math.hypot(P.x - s.x, P.y - s.y);
+    if (d < 110) { s.x += (P.x - s.x) / d * 420 * dt; s.y += (P.y - s.y) / d * 420 * dt; }
+    if (d < 22) { s.got = true; S.score += 10; P.xp++; AK.play('shard', .25, 1 + Math.min(P.xp * .04, .7), .04); }
+  }
+  shards = shards.filter(s => !s.got && s.t < 12);
+  const need = 5 + P.lvl * 4;
+  if (P.xp >= need) { P.xp -= need; P.lvl++; sysMsg('[SYSTEM] Level up. Lv. ' + P.lvl); AK.play('levelup', .7); AK.vo('vo_levelup'); burst(P.x, P.y, '#ffd84a', 30, 240); if (P.hp < 5 && P.lvl % 2 === 0) P.hp++; }
+
+}
+
+/* ---------- draw ---------- */
+function drawBG() {
+  const bg = g.createRadialGradient(W / 2, H * .25, 20, W / 2, H * .4, Math.max(W, H));
+  bg.addColorStop(0, '#191238'); bg.addColorStop(.5, '#0c0a1c'); bg.addColorStop(1, '#05040b');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(124,92,255,.07)'; g.lineWidth = 1;                // floor grid
+  const step = 48, off = (T * 10) % step;
+  for (let x = -step + off; x < W + step; x += step) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+  for (let y = -step + off; y < H + step; y += step) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+}
+function drawGate(x, y, open, t) {
+  if (open <= 0) return;
+  const rx = 62 * open, ry = 96 * open;
+  g.save(); g.translate(x, y);
+  const gl = g.createRadialGradient(0, 0, 4, 0, 0, ry * 1.9);
+  gl.addColorStop(0, 'rgba(124,92,255,.55)'); gl.addColorStop(1, 'rgba(124,92,255,0)');
+  g.fillStyle = gl; g.beginPath(); g.ellipse(0, 0, rx * 2.2, ry * 1.9, 0, 0, 6.283); g.fill();
+  const core = g.createRadialGradient(0, 0, 2, 0, 0, ry);
+  core.addColorStop(0, '#ffffff'); core.addColorStop(.25, '#9fe8ff'); core.addColorStop(.6, '#5b3cff'); core.addColorStop(1, '#120a33');
+  g.fillStyle = core; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, 6.283); g.fill();
+  g.lineWidth = 3; g.strokeStyle = '#38d6ff'; g.shadowColor = '#38d6ff'; g.shadowBlur = 20;
+  g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, 6.283); g.stroke(); g.shadowBlur = 0;
+  for (let i = 0; i < 26; i++) {                                         // swirl
+    const a = t * 1.6 + i * .7, k = .35 + (i % 7) / 9;
+    g.fillStyle = i % 3 ? 'rgba(56,214,255,.8)' : 'rgba(255,255,255,.9)';
+    g.beginPath(); g.arc(Math.cos(a) * rx * k, Math.sin(a) * ry * k, 1.6, 0, 6.283); g.fill();
+  }
+  g.restore();
+}
+function drawPortraitHead(x, y, r, ringColor) {
+  if (!portrait) return;
+  g.save(); g.beginPath(); g.arc(x, y, r, 0, 6.283); g.clip(); g.drawImage(portrait, x - r, y - r, r * 2, r * 2); g.restore();
+  g.lineWidth = 3; g.strokeStyle = ringColor; g.shadowColor = ringColor; g.shadowBlur = 12;
+  g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke(); g.shadowBlur = 0;
+}
+function drawPlayer() {
+  const x = P.x, y = P.y, bob = P.moving ? Math.sin(T * 14) * 2.5 : 0;
+  if (P.inv > 0 && P.dash <= 0 && Math.floor(T * 20) % 2) g.globalAlpha = .45;
+  g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(x, y + 26, 18, 6, 0, 0, 6.283); g.fill();
+  g.strokeStyle = '#2a2160'; g.lineWidth = 6; g.lineCap = 'round';             // legs
+  const sw = P.moving ? Math.sin(T * 14) * 6 : 0;
+  g.beginPath(); g.moveTo(x - 6, y + 10); g.lineTo(x - 7 + sw, y + 24); g.moveTo(x + 6, y + 10); g.lineTo(x + 7 - sw, y + 24); g.stroke();
+  g.strokeStyle = '#9fe8ff'; g.lineWidth = 3;                                  // blade on back
+  g.beginPath(); g.moveTo(x - 16 * P.face, y + 12 + bob); g.lineTo(x + 18 * P.face, y - 30 + bob); g.stroke();
+  g.fillStyle = '#3b2f86'; g.strokeStyle = '#9fe8ff'; g.lineWidth = 1.5; g.beginPath();                                     // coat
+  g.moveTo(x - 15, y - 6 + bob); g.lineTo(x + 15, y - 6 + bob); g.lineTo(x + 19 + (P.moving ? -5 * P.face : 0), y + 16); g.lineTo(x - 19 + (P.moving ? -5 * P.face : 0), y + 16); g.closePath(); g.fill(); g.stroke();
+  g.strokeStyle = '#38d6ff'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y - 6 + bob); g.lineTo(x, y + 15); g.stroke();
+  drawPortraitHead(x, y - 30 + bob, 30, P.flash > 0 ? '#ff4d6d' : P.dash > 0 ? '#ffffff' : '#38d6ff');
+  g.globalAlpha = 1;
+  g.font = '700 12px "Chakra Petch"'; g.textAlign = 'center'; g.fillStyle = 'rgba(238,240,255,.85)'; g.fillText(hunterName.slice(0, 14), x, y + 42); g.textAlign = 'left';
+}
+function drawEnemy(e) {
+  const wob = Math.sin(e.wob) * (e.r * .08);
+  g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(e.x, e.y + e.r, e.r * .9, e.r * .3, 0, 0, 6.283); g.fill();
+  if (e.type === 'boss') { const a = g.createRadialGradient(e.x, e.y, e.r * .5, e.x, e.y, e.r * 2); a.addColorStop(0, 'rgba(124,92,255,.5)'); a.addColorStop(1, 'rgba(124,92,255,0)'); g.fillStyle = a; g.beginPath(); g.arc(e.x, e.y, e.r * 2, 0, 6.283); g.fill(); }
+  g.fillStyle = e.hit > 0 ? '#ffffff' : e.type === 'boss' ? '#1a0f3d' : e.type === 'brute' ? '#4a1f7a' : '#3a1d6e';
+  g.beginPath(); g.ellipse(e.x, e.y + wob, e.r, e.r * 1.05, 0, 0, 6.283); g.fill();
+  if (e.type !== 'imp') { g.beginPath(); g.moveTo(e.x - e.r * .6, e.y - e.r * .6); g.lineTo(e.x - e.r * .9, e.y - e.r * 1.35); g.lineTo(e.x - e.r * .25, e.y - e.r * .85); g.moveTo(e.x + e.r * .6, e.y - e.r * .6); g.lineTo(e.x + e.r * .9, e.y - e.r * 1.35); g.lineTo(e.x + e.r * .25, e.y - e.r * .85); g.fill(); }
+  g.fillStyle = '#ff4d6d'; g.shadowColor = '#ff4d6d'; g.shadowBlur = 10;
+  const es = Math.max(2, e.r * .16);
+  g.beginPath(); g.arc(e.x - e.r * .35, e.y - e.r * .15 + wob, es, 0, 6.283); g.arc(e.x + e.r * .35, e.y - e.r * .15 + wob, es, 0, 6.283); g.fill(); g.shadowBlur = 0;
+  if (e.type !== 'imp') { const w = e.r * 2; g.fillStyle = '#2b2550'; g.fillRect(e.x - w / 2, e.y - e.r - 14, w, 4); g.fillStyle = e.type === 'boss' ? '#ffd84a' : '#ff4d6d'; g.fillRect(e.x - w / 2, e.y - e.r - 14, w * clamp(e.hp / e.maxhp, 0, 1), 4); }
+}
+function drawHUD() {
+  const top = 14 + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0);
+  g.fillStyle = 'rgba(16,13,30,.8)'; g.strokeStyle = '#2b2550'; g.lineWidth = 1;
+  roundRect(12, top, 196, 62, 12); g.fill(); g.stroke();
+  drawPortraitHead(43, top + 31, 22, '#38d6ff');
+  g.fillStyle = '#eef0ff'; g.font = '700 15px "Chakra Petch"'; g.textAlign = 'left'; g.fillText(hunterName.slice(0, 14), 74, top + 25);
+  for (let i = 0; i < 5; i++) { const hx = 80 + i * 18, hy = top + 44; g.fillStyle = i < P.hp ? '#ff4d6d' : '#3a3560'; g.beginPath(); g.moveTo(hx, hy - 7); g.lineTo(hx + 6, hy); g.lineTo(hx, hy + 7); g.lineTo(hx - 6, hy); g.fill(); }
+  g.fillStyle = '#ffd84a'; g.font = '600 12px "Chakra Petch"'; g.fillText('Lv.' + P.lvl, 172, top + 48);
+  const ty = W < 560 ? top + 84 : top;
+  g.textAlign = 'center'; g.font = '600 11px "Chakra Petch"'; g.fillStyle = '#9a9cc4';
+  g.fillText(S.phase === 'break' ? (S.gate ? 'NEXT GATE IN ' + Math.ceil(S.breakT) : 'GET READY') : (S.toSpawn + enemies.length) + ' SHADOWS LEFT', W / 2, ty + 14);
+  g.font = '700 26px "Chakra Petch"'; g.fillStyle = S.gate % 5 === 0 && S.phase === 'fight' ? '#ffd84a' : '#eef0ff';
+  g.fillText('GATE ' + Math.max(1, S.gate + (S.phase === 'break' && S.gate ? 1 : 0)), W / 2, ty + 40);
+  g.textAlign = 'right'; g.font = '600 11px "Chakra Petch"'; g.fillStyle = '#9a9cc4'; g.fillText('SCORE', W - 16, top + 14);
+  g.font = '700 22px "Chakra Petch"'; g.fillStyle = '#eef0ff'; g.fillText(S.score.toLocaleString(), W - 16, top + 38);
+  g.font = '700 14px "Chakra Petch"'; g.fillStyle = rankColor(rankOf()); g.fillText('RANK ' + rankOf(), W - 16, top + 58);
+  // special meter
+  const spy = top + 70, ready = P.sp >= 100;
+  g.fillStyle = 'rgba(16,13,30,.8)'; roundRect(12, spy, 196, 16, 8); g.fill();
+  g.fillStyle = ready ? (Math.floor(T * 6) % 2 ? '#d7c6ff' : '#b18cff') : '#7c5cff'; roundRect(14, spy + 2, 192 * P.sp / 100, 12, 6); g.fill();
+  g.fillStyle = '#eef0ff'; g.font = '700 10px "Chakra Petch"'; g.textAlign = 'left'; g.fillText(ready ? (isTouch ? 'SP READY · TAP SP' : 'SP READY · PRESS L') : 'SPECIAL', 20, spy + 12);
+  $('#spBtn').classList.toggle('ready', ready);
+  if (P.weapon) { const w = WEAPONS[P.weapon.kind], wy = spy + 22;
+    g.fillStyle = 'rgba(16,13,30,.8)'; roundRect(12, wy, 196, 16, 8); g.fill();
+    g.fillStyle = w.color; roundRect(14, wy + 2, 192 * P.weapon.t / w.dur, 12, 6); g.fill();
+    g.fillStyle = '#0b0820'; g.font = '700 10px "Chakra Petch"'; g.textAlign = 'left'; g.fillText(w.name, 20, wy + 12); }
+  // combo counter
+  if (S.combo >= 2) {
+    const a = clamp(S.comboT / .4, 0, 1), sz = 30 + Math.min(S.combo, 40) * .4, x = W - 18, y = H * .36;
+    g.save(); g.globalAlpha = a; g.textAlign = 'right';
+    g.shadowColor = '#38d6ff'; g.shadowBlur = 16; g.fillStyle = '#eef0ff'; g.font = '700 ' + sz + 'px "Chakra Petch"'; g.fillText(S.combo, x - 52, y);
+    g.shadowBlur = 0; g.font = '700 16px "Chakra Petch"'; g.fillStyle = '#9fe8ff'; g.fillText('HITS', x, y);
+    const style = S.combo >= 30 ? 'SOVEREIGN' : S.combo >= 20 ? 'SAVAGE' : S.combo >= 10 ? 'STYLISH' : '';
+    if (style) { g.fillStyle = '#ffd84a'; g.font = '700 14px "Chakra Petch"'; g.fillText(style, x, y + 22); }
+    g.restore();
+  }
+  g.textAlign = 'left';
+}
+function drawCine() {
+  if (!S || mode !== 'play') return;
+  if (S.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + clamp(S.flash, 0, 1) + ')'; g.fillRect(0, 0, W, H); }
+  const c = S.cine; if (!c) return;
+  const k = clamp(Math.min(c.t / .35, (c.dur - c.t) / .4), 0, 1), e = 1 - Math.pow(1 - k, 3), bar = H * .11 * e;
+  g.fillStyle = '#000'; g.fillRect(0, 0, W, bar); g.fillRect(0, H - bar, W, bar);
+  const a = clamp(Math.min((c.t - .25) / .3, (c.dur - .3 - c.t) / .3), 0, 1); if (a <= 0) return;
+  g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.shadowColor = '#7c5cff'; g.shadowBlur = 30;
+  g.fillStyle = '#eef0ff'; g.font = '700 ' + Math.round(clamp(W / 11, 28, 64)) + 'px "Chakra Petch"'; g.fillText(c.title, W / 2, H * .5);
+  g.shadowBlur = 0; g.fillStyle = '#ffd84a'; g.font = '600 ' + Math.round(clamp(W / 32, 12, 20)) + 'px "Chakra Petch"'; g.fillText(c.sub || '', W / 2, H * .5 + clamp(W / 18, 24, 44));
+  g.restore();
+}
+function drawSysMsg() {
+  if (!S || S.msgT <= 0 || S.cine) return;
+  const a = clamp(S.msgT, 0, 1); g.globalAlpha = a;
+  g.font = '700 16px "Chakra Petch"'; const w = g.measureText(S.msg).width + 36, x = W / 2 - w / 2, y = H * .62;
+  g.fillStyle = 'rgba(10,8,26,.85)'; g.strokeStyle = '#38d6ff'; g.lineWidth = 1.5; roundRect(x, y, w, 38, 8); g.fill(); g.stroke();
+  g.fillStyle = '#9fe8ff'; g.textAlign = 'center'; g.fillText(S.msg, W / 2, y + 25); g.textAlign = 'left'; g.globalAlpha = 1;
+}
+function roundRect(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+function screenPos(x, y, h = 0) { return window.R3 ? R3.project(x, y, h) : { x, y }; }
+function draw3D() {
+  R3.render();
+  g.clearRect(0, 0, W, H);
+  if (mode === 'intro' && T > 1.95) { g.fillStyle = 'rgba(255,255,255,' + clamp(1 - (T - 1.95) / .45, 0, 1) + ')'; g.fillRect(0, 0, W, H); }
+  if (mode === 'play' || (mode === 'intro' && T > 2)) {
+    for (const e of enemies) if (e.type !== 'imp') {
+      const p = screenPos(e.x, e.y, e.r / R3.K * 2.5), w = e.type === 'boss' ? 96 : 44;
+      g.fillStyle = 'rgba(43,37,80,.9)'; g.fillRect(p.x - w / 2, p.y, w, 5);
+      g.fillStyle = e.type === 'boss' ? '#ffd84a' : '#ff4d6d'; g.fillRect(p.x - w / 2, p.y, w * clamp(e.hp / e.maxhp, 0, 1), 5);
+    }
+    const n = screenPos(P.x, P.y);
+    g.font = '700 12px "Chakra Petch"'; g.textAlign = 'center'; g.fillStyle = 'rgba(238,240,255,.85)'; g.fillText(hunterName.slice(0, 14), n.x, n.y + 20);
+  }
+  if (S && mode === 'play') for (const pk of S.pickups) { const w = WEAPONS[pk.kind], p = screenPos(pk.x, pk.y, 1.5);
+    g.globalAlpha = pk.t > 16 ? (Math.floor(T * 8) % 2 ? .3 : 1) : 1; g.font = '700 11px "Chakra Petch"'; g.textAlign = 'center'; g.fillStyle = w.color; g.fillText(w.name, p.x, p.y); g.globalAlpha = 1; }
+  for (const t of texts) {
+    const up = (.9 - t.life) * 40, p = screenPos(t.x, t.y + up, 1.4);
+    g.globalAlpha = clamp(t.life, 0, 1); g.fillStyle = t.c; g.font = '700 15px "Chakra Petch"'; g.textAlign = 'center'; g.fillText(t.txt, p.x, p.y - up * 1.3);
+  }
+  g.globalAlpha = 1; g.textAlign = 'left';
+  drawOverlay();
+}
+function draw() {
+  if (window.R3) return draw3D();
+  g.save();
+  if (S && S.shake > .5) g.translate(rand(-S.shake, S.shake), rand(-S.shake, S.shake));
+  drawBG();
+  const gp = gatePos();
+  if (mode === 'menu' || mode === 'end') { drawGate(W / 2, H * .5, 1.6 + Math.sin(T) * .04, T); }
+  else if (mode === 'intro') {
+    const open = clamp(T / 1.1, 0, 1); drawGate(gp.x, gp.y, open * gateScale(), T);
+    // your portrait card flies out of the Gate and lands
+    if (T > .8 && portrait) {
+      const k = clamp((T - .8) / 1.2, 0, 1), e = 1 - Math.pow(1 - k, 3);
+      const sz = 150 - 90 * e, cx = gp.x, cy = gp.y + (P.y - 30 - gp.y) * e;
+      g.save(); g.shadowColor = '#38d6ff'; g.shadowBlur = 30; drawPortraitHead(cx, cy, sz / 2, '#38d6ff'); g.restore();
+    }
+    if (T > 1.95) { g.fillStyle = 'rgba(255,255,255,' + clamp(1 - (T - 1.95) / .45, 0, 1) + ')'; g.fillRect(0, 0, W, H); }
+  } else {
+    drawGate(gp.x, gp.y, gateScale(), T);
+  }
+  if (mode === 'play' || (mode === 'intro' && T > 2)) {
+    for (const s of shards) { g.fillStyle = '#38d6ff'; g.shadowColor = '#38d6ff'; g.shadowBlur = 8; g.save(); g.translate(s.x, s.y); g.rotate(T * 3 + s.t); g.fillRect(-3.5, -3.5, 7, 7); g.restore(); g.shadowBlur = 0; }
+    const list = [...enemies, { player: true, y: P.y }].sort((a, b) => a.y - b.y);
+    for (const o of list) o.player ? drawPlayer() : drawEnemy(o);
+    for (const s of slashes) {
+      const k = s.life / .18; g.strokeStyle = 'rgba(159,232,255,' + k + ')'; g.lineWidth = 10 * k + 2; g.shadowColor = '#38d6ff'; g.shadowBlur = 16;
+      g.beginPath(); g.arc(s.x, s.y, 80, s.ang - 1.1 + (1 - k) * .4, s.ang + 1.1 + (1 - k) * .4); g.stroke(); g.shadowBlur = 0;
+    }
+  }
+  for (const p of parts) { g.globalAlpha = clamp(p.life / p.max, 0, 1); g.fillStyle = p.c; g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.283); g.fill(); }
+  g.globalAlpha = 1;
+  for (const t of texts) { g.globalAlpha = clamp(t.life, 0, 1); g.fillStyle = t.c; g.font = '700 14px "Chakra Petch"'; g.textAlign = 'center'; g.fillText(t.txt, t.x, t.y); }
+  g.globalAlpha = 1; g.textAlign = 'left';
+  g.restore();
+  drawOverlay();
+}
+function drawOverlay() {
+  if (mode === 'play' && !(S && S.cine)) {
+    drawHUD();
+    if (joy && !joy.mouse) { g.strokeStyle = 'rgba(56,214,255,.35)'; g.lineWidth = 2; g.beginPath(); g.arc(joy.ox, joy.oy, 50, 0, 6.283); g.stroke(); const jx = joy.x - joy.ox, jy = joy.y - joy.oy, m = Math.min(50, Math.hypot(jx, jy)), a = Math.atan2(jy, jx); g.fillStyle = 'rgba(56,214,255,.45)'; g.beginPath(); g.arc(joy.ox + Math.cos(a) * m, joy.oy + Math.sin(a) * m, 20, 0, 6.283); g.fill(); }
+    if (S.elapsed < 7) { g.fillStyle = 'rgba(238,240,255,.75)'; g.font = '500 14px Inter'; g.textAlign = 'center'; g.fillText(isTouch ? 'Drag to move · ATK to slash (tap 3× for a combo) · DASH · SP when full' : 'WASD move · J / click = slash (3-hit combo) · SPACE dash · L special', W / 2, H - 28); g.textAlign = 'left'; }
+  }
+  drawCine();
+  drawSysMsg();
+}
+
+function loop(now) {
+  const dt = Math.min(.033, (now - last) / 1000); last = now;
+  update(dt); draw(); GameRec.frame();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------- end + Hunter License ---------- */
+const RANKS = [['S', 15], ['A', 10], ['B', 7], ['C', 5], ['D', 3], ['E', 0]];   // by gate reached
+function rankOf() { const gN = S ? S.gate : 0; for (const [r, v] of RANKS) if (gN >= v) return r; return 'E'; }
+function rankColor(r) { return { S: '#ffd84a', A: '#ff7a45', B: '#b18cff', C: '#38d6ff', D: '#4dffb0', E: '#9a9cc4' }[r]; }
+
+let licenseURL = null;
+async function finish(cleared) {
+  if (mode !== 'play') return;
+  mode = 'end'; joy = null; document.querySelectorAll('.tbtn').forEach(b => b.style.display = 'none');
+  GameRec.stop(); S.cine = null; AK.musicOff(1.2);
+  AK.play(cleared ? 'win' : 'lose', .9); setTimeout(() => AK.vo(cleared ? 'vo_cleared' : 'vo_fallen'), 400);
+  await document.fonts.ready;
+  licenseURL = makeLicense(cleared);
+  $('#endImg').src = licenseURL;
+  $('#endKicker').textContent = 'Fell at Gate ' + S.gate + ' · ' + rankOf() + '-Rank Hunter';
+  showEndButtons();
+  $('#bShare').style.display = navigator.canShare && navigator.canShare({ files: [new File([new Blob()], 'x.png', { type: 'image/png' })] }) ? 'flex' : 'none';
+  show('sEnd');
+}
+function makeLicense(cleared) {
+  const w = 1080, h = 1350, c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+  const bg = x.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#0b0918'); bg.addColorStop(1, '#1d1245'); x.fillStyle = bg; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 6; i++) { x.strokeStyle = 'rgba(124,92,255,' + (.18 - i * .025) + ')'; x.lineWidth = 2; x.beginPath(); x.ellipse(w / 2, 560, 360 + i * 70, 420 + i * 70, 0, 0, 6.283); x.stroke(); }
+  x.textAlign = 'center';
+  x.fillStyle = '#38d6ff'; x.font = '600 30px "Chakra Petch"'; x.fillText('G A T E C R A S H E R S', w / 2, 92);
+  x.fillStyle = '#eef0ff'; x.font = '700 68px "Chakra Petch"'; x.fillText('HUNTER LICENSE', w / 2, 168);
+  const ps = 620, px = (w - ps) / 2, py = 220;
+  x.save(); x.shadowColor = '#38d6ff'; x.shadowBlur = 50; x.fillStyle = '#000'; x.fillRect(px, py, ps, ps); x.restore();
+  x.save(); x.beginPath(); x.rect(px, py, ps, ps); x.clip(); x.drawImage(portrait, px, py, ps, ps); x.restore();
+  x.strokeStyle = '#38d6ff'; x.lineWidth = 6; x.strokeRect(px, py, ps, ps);
+  const r = rankOf(), rc = rankColor(r), bx = px + ps - 20, by = py + ps - 20;   // rank badge
+  x.save(); x.translate(bx, by); x.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; x.lineTo(Math.cos(a) * 110, Math.sin(a) * 110); } x.closePath();
+  x.fillStyle = '#0b0918'; x.fill(); x.lineWidth = 8; x.strokeStyle = rc; x.shadowColor = rc; x.shadowBlur = 30; x.stroke(); x.shadowBlur = 0;
+  x.fillStyle = rc; x.font = '700 120px "Chakra Petch"'; x.fillText(r, 0, 42); x.restore();
+  x.fillStyle = '#eef0ff'; x.font = '700 64px "Chakra Petch"'; x.fillText(hunterName.toUpperCase().slice(0, 16), w / 2, 950);
+  x.fillStyle = '#9a9cc4'; x.font = '500 30px Inter'; x.fillText('Survived ' + Math.max(0, S.gate - 1) + ' Gates · max combo ' + S.maxCombo, w / 2, 1000);
+  const stats = [['GATE', String(S.gate)], ['SCORE', S.score.toLocaleString()], ['KILLS', String(S.kills)]];
+  stats.forEach(([k, v], i) => {
+    const cx = w / 2 + (i - 1) * 300;
+    x.fillStyle = 'rgba(16,13,30,.85)'; x.strokeStyle = '#2b2550'; x.lineWidth = 2;
+    x.beginPath(); x.roundRect ? x.roundRect(cx - 130, 1040, 260, 140, 18) : x.rect(cx - 130, 1040, 260, 140); x.fill(); x.stroke();
+    x.fillStyle = '#9a9cc4'; x.font = '600 26px "Chakra Petch"'; x.fillText(k, cx, 1088);
+    x.fillStyle = '#eef0ff'; x.font = '700 52px "Chakra Petch"'; x.fillText(v, cx, 1152);
+  });
+  x.fillStyle = '#9a9cc4'; x.font = '500 26px Inter'; x.fillText(usedComfy ? 'Forged with ComfyUI · ' + [routesUsed.portrait, routesUsed.clip].filter(Boolean).map(MODEL_NAME).join(' + ') : 'Gate Run · built on ComfyUI', w / 2, 1256);
+  x.fillStyle = '#ffd84a'; x.font = '700 30px "Chakra Petch"'; x.fillText('#OpenSourceHiggsfield', w / 2, 1302);
+  return c.toDataURL('image/png');
+}
+function showEndButtons() {
+  const hasTrailer = !!(trailer && trailer.shots.some(Boolean));
+  $('#bReel').style.display = hasTrailer && window.Director && Director.pickMime() ? 'flex' : 'none';
+  $('#bClip').style.display = hasTrailer || clipURL ? 'flex' : 'none';
+}
+const ext = b => b.type.includes('mp4') ? '.mp4' : b.type.includes('webm') ? '.webm' : '.webp';
+const slug = () => hunterName.replace(/\W+/g, '-').toLowerCase();
+async function renderOnce(label, segments, narration) {
+  toast('Rendering your ' + label + '… watch it play', 30000);
+  const blob = await Director.play({ layer: $('#clipLayer'), segments, narration, record: true });
+  $('#toast').style.display = 'none';
+  return blob;
+}
+function reelSegments() {
+  const r = rankOf(), segs = [{ type: 'card', dur: 1.3, text: 'A GATE HAS OPENED', sub: '[ SYSTEM ]', sfx: 'riser' }];
+  const sh = trailer.shots, spec = trailer.spec.shots;
+  if (sh[0]) segs.push({ type: 'video', src: sh[0].url, use: [0, 4.2], card: 'HUNTER ' + hunterName.toUpperCase(), sfx: 'gate_open' });
+  if (sh[1]) segs.push({ type: 'video', src: sh[1].url, use: [0.4, 3.2], flash: true, sfx: 'braam' });
+  if (GameRec.url) segs.push({ type: 'video', src: GameRec.url, use: [0, Math.min(GameRec.dur || 7, 9)], flash: true, vol: 1, card: GameRec.tag === 'boss' ? 'GATE BOSS' : 'THE HUNT' });
+  if (sh[2]) segs.push({ type: 'video', src: sh[2].url, use: [0.4, 3.2], flash: true, sfx: 'whoosh' });
+  segs.push({ type: 'image', img: $('#endImg'), dur: 3.2, flash: true, kenburns: true, sfx: 'win' });
+  segs.push({ type: 'end', dur: 2.4, portrait, line: 'GATE ' + S.gate + ' · ' + r + '-RANK', sfx: 'braam' });
+  return segs;
+}
+async function shareOrSave(blob, name, text) {
+  const file = new File([blob], name, { type: blob.type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], text }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  download(URL.createObjectURL(blob), name);
+}
+$('#bReel').onclick = async () => {
+  try {
+    const blob = await renderOnce('Reel', reelSegments(), null);
+    if (blob) shareOrSave(blob, 'gate-run-reel-' + slug() + ext(blob), hunterName + ' reached Gate ' + S.gate + ' (' + rankOf() + '-Rank Hunter). Beat that. #OpenSourceHiggsfield');
+  } catch (e) { console.warn(e); toast('Could not render the Reel: ' + e.message); }
+};
+
+/* Saves: inside claude.ai use the downloads capability; when served locally use a normal link. */
+let dlNS = null;
+if (window.claude && window.claude.use) window.claude.use('downloads').then(ns => { dlNS = ns; }).catch(() => {});
+async function download(url, name) {
+  if (window.claude) {
+    if (!dlNS) { toast('Saving is not available in this view.'); return; }
+    try { const blob = await (await fetch(url)).blob(); await dlNS.save({ filename: name, data: blob }); }
+    catch (e) { if (e && e.code !== 'declined') toast('Could not save: ' + (e.message || e.code || 'unknown')); }
+    return;
+  }
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+$('#bSave').onclick = () => download(licenseURL, 'hunter-license-' + hunterName.replace(/\W+/g, '-').toLowerCase() + '.png');
+$('#bClip').onclick = async () => {
+  try {
+    if (trailer && trailer.shots.some(Boolean) && window.Director && Director.pickMime()) {
+      const blob = trailer.blob || (trailer.blob = await renderOnce('trailer', trailerSegments('GATE ' + S.gate + ' · ' + rankOf() + '-RANK'), trailer.narration));
+      if (blob) return shareOrSave(blob, 'gate-run-trailer-' + slug() + ext(blob), '#OpenSourceHiggsfield');
+    }
+    const b = await (await fetch(clipURL)).blob(); download(URL.createObjectURL(b), 'gate-opening' + ext(b));
+  } catch (e) { window.open(clipURL, '_blank'); }
+};
+async function shareLicense() {
+  const blob = await (await fetch(licenseURL)).blob(), files = [new File([blob], 'hunter-license.png', { type: 'image/png' })];
+  try {
+    if (clipURL) { const c = await (await fetch(clipURL)).blob(); files.push(new File([c], 'gate-opening.' + (clipIsVideo ? 'mp4' : 'webp'), { type: c.type })); }
+    if (!navigator.canShare(files.length > 1 ? { files } : { files: files.slice(0, 1) })) files.splice(1);
+    await navigator.share({ files, text: hunterName + ' reached Gate ' + S.gate + ' (' + rankOf() + '-Rank Hunter). Beat that. #OpenSourceHiggsfield' });
+  } catch (e) { if (e.name !== 'AbortError') toast('Share failed. Save it instead.'); }
+}
+$('#bShare').onclick = shareLicense;
+$('#bAgain').onclick = () => beginIntro();
+$('#bNew').onclick = () => { mode = 'menu'; show('sStart'); };
+
+detectComfy();
+</script>
+<script src="director.js"></script>
+<script type="module" src="world3d.js"></script>
+</body>
+</html>
