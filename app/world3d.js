@@ -43,14 +43,16 @@ if (renderer) {
   const gateLight = new THREE.PointLight(VIOLET, 28, 26, 1.6); scene.add(gateLight);
   const heroLight = new THREE.PointLight(CYAN, 5, 6, 2); scene.add(heroLight);
 
-  /* ---------- ground: grid, arena border, gate glow + ripples ---------- */
+  /* ---------- ground: stone flagstones, arena border, gate glow + ripples ---------- */
   const groundMat = new THREE.ShaderMaterial({
     transparent: true,
     uniforms: { uTime: { value: 0 }, uGate: { value: new THREE.Vector2() }, uArena: { value: new THREE.Vector2(5, 10) }, uOpen: { value: 1 }, uTint: { value: new THREE.Color(0x221a4a) }, uBack: { value: 0 } },
     vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
     fragmentShader: `
       varying vec3 vW; uniform float uTime, uOpen, uBack; uniform vec2 uGate, uArena; uniform vec3 uTint;
-      float grid(vec2 p, float w){ vec2 g = abs(fract(p - .5) - .5) / fwidth(p); return 1. - min(min(g.x, g.y) / w, 1.); }
+      float h1(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+        return mix(mix(h1(i), h1(i + vec2(1, 0)), f.x), mix(h1(i + vec2(0, 1)), h1(i + 1.), f.x), f.y); }
       void main(){
         vec2 p = vW.xz;
         float dg = length((p - uGate) * vec2(1., 1.3));
@@ -58,13 +60,19 @@ if (renderer) {
         vec2 q = abs(p) - uArena; float box = max(q.x, q.y);
         float inside = 1. - smoothstep(-.2, .2, box);
         float border = 1. - smoothstep(0., .07, abs(box));
-        vec3 col = vec3(.018, .014, .04) + uTint * .06;
-        col += mix(vec3(.16, .11, .45), uTint * .9, .45) * grid(p, 1.2) * (.18 + .82 * glow) * (.3 + .7 * inside);
-        col += vec3(.20, .15, .60) * grid(p / 4., 1.4) * .22;
+        // staggered stone slabs: each row shifted, each slab its own tone, mortar gaps between
+        vec2 sz = vec2(1.7, 1.15), s = p / sz; float row = floor(s.y); s.x += row * .5 + h1(vec2(row, 7.)) * .3;
+        vec2 id = floor(s), f = fract(s), e = min(f, 1. - f) * sz;
+        float edge = min(e.x, e.y), aa = fwidth(edge) + .004;
+        float slab = smoothstep(.035 - aa, .035 + aa, edge);
+        float tone = .72 + .5 * h1(id), wear = .8 + .35 * n2(p * 2.6) * n2(p * .35 + 3.);
+        vec3 stone = (vec3(.05, .045, .07) + uTint * .42) * tone * wear * (.85 + .3 * smoothstep(0., .25, edge));   // slab edges a little darker
+        vec3 col = mix(vec3(.01, .008, .02), stone, slab) * (.55 + .45 * inside);
+        col += vec3(.45, .3, 1.4) * (1. - slab) * pow(glow, 3.) * 1.6;   // rift light seeps up through the gaps near the Gate
         col += vec3(.30, .20, .95) * glow * .55;
         col += vec3(.35, .28, 1.2) * glow * .5 * smoothstep(.55, 1., sin(dg * 1.7 - uTime * 3.2));
         col += vec3(.5, 2.1, 2.8) * border * .55;
-        float fade = exp(-length(p - cameraPosition.xz) * .03);
+        float fade = exp(-length(p - cameraPosition.xz) * .022);
         float keep = 1. - uBack * smoothstep(1.5, 9., box);   // with an arena backdrop, the floor ends a little past the arena
         gl_FragColor = vec4(col * fade, keep);
       }`,
@@ -288,8 +296,9 @@ if (renderer) {
     if (a.glow) { a.glow.scale.set(pw * 1.07, ph * 1.04, 1); a.glow.position.set(ox, a.body.position.y + ph * .01, -.03); }
     a.shadow.scale.setScalar(HEIGHT[a.char] * .55);
     a.g.position.set(x, y, z);
-    a.g.rotation.y = Math.atan2(camera.position.x - x, camera.position.z - z);
-    a.shadow.rotation.set(-Math.PI / 2, 0, -a.g.rotation.y); a.shadow.position.y = -y + .02;
+    const cdx = camera.position.x - x, cdz = camera.position.z - z, lean = Math.max(0, Math.atan2(camera.position.y - y, Math.hypot(cdx, cdz)) - .3) * .7;
+    a.g.rotation.order = 'YXZ'; a.g.rotation.set(lean, Math.atan2(cdx, cdz), 0);   // lean toward the overhead camera so sprites don't look squashed
+    a.shadow.rotation.set(-Math.PI / 2 - lean, 0, -a.g.rotation.y); a.shadow.position.y = -y + .02;
     return true;
   }
   const actors = new Map();           // enemy -> actor
@@ -326,11 +335,11 @@ if (renderer) {
       const ax = wx(P.x), az = wz(P.y), bx = wx(enemies[0].x), bz = wz(enemies[0].y);
       const sep = Math.hypot(ax - bx, (az - bz) * 1.3), Dd = Math.max(D * .8, sep * 1.05 / Math.max(.5, camera.aspect) * .62 + 5.5);
       camT.set((ax + bx) / 2, .9, (az + bz) / 2);
-      camP.set(camT.x, Dd * .5, camT.z + Dd * 1.05);
+      camP.set(camT.x, Dd * .95, camT.z + Dd * 1.15);
     } else if (play) {
       const px = wx(P.x), pz = wz(P.y);
       camT.set(px * .8, .9, pz * .8);
-      camP.set(camT.x, D * .5, camT.z + D * 1.05);         // HD-2D: low, close; the arena backdrop fills the top of the frame
+      camP.set(camT.x, D * .95, camT.z + D * 1.15);        // three-quarter overhead: ~40° down, flatter lens; the arena backdrop shows past the far floor edge
     } else {   // menu / end: slow orbit around the Gate
       const a = Math.sin(T * .12) * .7;
       camT.set(gx, gy * .8, gz);
@@ -339,7 +348,7 @@ if (renderer) {
     const k = inited && Number.isFinite(camera.position.x) ? 1 - Math.pow(.02, dt * 3) : 1;
     camera.position.lerp(camP, k);
     if (S && S.shake > .5) camera.position.add(v3.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(S.shake * .012));
-    const fov = P && P.dash > 0 && play ? 58 : 48;           // dash: quick FOV kick
+    const fov = play && !c ? (P && P.dash > 0 ? 46 : 38) : 48;   // play: flatter lens for the overhead view; dash: quick FOV kick
     if (Math.abs(camera.fov - fov) > .05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 12); camera.updateProjectionMatrix(); }
     camera.lookAt(camT);
     inited = true;

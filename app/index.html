@@ -99,7 +99,7 @@ a{color:var(--gate2)}
     <label class="field">Arena</label>
     <div class="arenas" id="arenaRow"></div>
     <input type="file" id="arenaIn" accept="image/*" hidden>
-    <input type="file" id="fileIn" accept="image/*" capture="user" hidden>
+    <input type="file" id="fileIn" accept="image/*" hidden>
     <button class="btn" id="bSelfie">Take or upload a selfie</button>
     <button class="btn ghost" id="bGuest">Play as a guest Crasher</button>
     <button class="btn ghost" id="bDuel">⚔ 1v1 a friend online</button>
@@ -457,7 +457,7 @@ function drawIntroCard(dt) {
 }
 
 /* ---------- start / forge ---------- */
-$('#bSelfie').onclick = () => { if (status && status.server && status.tier === 'none') { $('#keyBox').style.display = 'block'; $('#keyIn').focus(); return toast('Paste your Comfy key first (it stays in this browser), or play as a guest Crasher', 5000); } $('#fileIn').click(); };
+$('#bSelfie').onclick = () => { if (status && status.server && status.tier === 'none') { $('#keyBox').style.display = 'block'; $('#keyBox').scrollIntoView({ block: 'center', behavior: 'smooth' }); $('#keyIn').focus(); return toast('Paste your Comfy key first (it stays in this browser), or play as a guest Crasher', 5000); } $('#fileIn').click(); };
 $('#bGuest').onclick = () => { personalSprites = null; window.resetHunterSprites && window.resetHunterSprites(); const rf = ROSTER.find(r => r.id === rosterPick) || ROSTER[0]; window.useRosterHunter && window.useRosterHunter(rf.id); hunterName = $('#nameIn').value.trim() || rf.name; portrait = rosterArt[rf.id] || guestPortrait || guestAvatar(); usedComfy = false; clipURL = null; trailer = null; beginIntro(); };
 // guest face: cropped from the default manhwa Crasher's full-body keyframe (falls back to a drawn avatar)
 let guestPortrait = null;
