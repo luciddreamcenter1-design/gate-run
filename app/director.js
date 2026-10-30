@@ -65,7 +65,10 @@ const Director = (() => {
     x.fillStyle = '#38d6ff'; x.font = '600 44px "Chakra Petch"'; if ('letterSpacing' in x) x.letterSpacing = '16px'; x.fillText('GATECRASHERS', CW / 2, CH * .6);
     x.fillStyle = '#eef0ff'; x.font = '700 120px "Chakra Petch"'; if ('letterSpacing' in x) x.letterSpacing = '6px'; x.fillText('GATE RUN', CW / 2, CH * .6 + 130);
     if (seg.line) { x.fillStyle = '#ffd84a'; x.font = '700 52px "Chakra Petch"'; x.fillText(seg.line, CW / 2, CH * .6 + 220); }
-    x.fillStyle = '#9a9cc4'; x.font = '500 38px Inter'; if ('letterSpacing' in x) x.letterSpacing = '0px'; x.fillText('Made with ComfyUI · FLUX 3 + LTX-2', CW / 2, CH * .86);
+    x.fillStyle = '#eef0ff'; x.font = '700 50px "Chakra Petch"'; if ('letterSpacing' in x) x.letterSpacing = '2px'; x.fillText('HOW MANY GATES CAN YOU CRASH?', CW / 2, CH * .6 + 300);
+    x.fillStyle = '#38d6ff'; x.font = '600 34px Inter'; if ('letterSpacing' in x) x.letterSpacing = '0px';
+    x.fillText((typeof PLAY_URL === 'string' ? PLAY_URL : '').replace(/^https?:\/\//, '').replace(/\/$/, ''), CW / 2, CH * .6 + 352);
+    x.fillStyle = '#9a9cc4'; x.font = '500 34px Inter'; x.fillText('Made with ComfyUI · FLUX 3 + LTX-2', CW / 2, CH * .86);
     x.fillStyle = '#ffd84a'; x.font = '700 44px "Chakra Petch"'; x.fillText('#OpenSourceHiggsfield', CW / 2, CH * .86 + 64);
     x.restore();
   }

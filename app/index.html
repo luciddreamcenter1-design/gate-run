@@ -3,7 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Gate Run</title>
+<title>Gate Run · How many Gates can you crash?</title>
+<meta name="description" content="Take a selfie, become a Gatecrasher, get your own anime trailer, then see how many Gates you can crash.">
+<meta name="theme-color" content="#07060d">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Gate Run">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -15,10 +20,12 @@
 :root[data-theme="dark"]{ --bg:#07060d; }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#07060d; } }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+#safeTop{position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top);pointer-events:none;visibility:hidden}
 canvas#gl,canvas#cv{position:fixed;inset:0;display:block;width:100%;height:100%}
 canvas#gl{z-index:0}canvas#cv{z-index:1}
-.screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+.screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));z-index:5;overflow-y:auto;touch-action:pan-y}
+@media (max-height:700px){.card{padding:16px 16px}h1{font-size:26px}p{font-size:14px;margin-bottom:10px}.btn{padding:12px 14px}}
 .screen.on{display:flex}
 .card{width:min(460px,100%);background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px 22px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 20px 80px rgba(124,92,255,.25)}
 .kicker{font:600 12px/1 "Chakra Petch",sans-serif;letter-spacing:.22em;color:var(--gate2);text-transform:uppercase}
@@ -73,14 +80,14 @@ a{color:var(--gate2)}
 </style>
 </head>
 <body>
-<canvas id="cv"></canvas>
+<canvas id="cv"></canvas><div id="safeTop"></div>
 
 <!-- START -->
 <section class="screen on" id="sStart">
   <div class="card">
     <div class="kicker">Gatecrashers · Gate Run</div>
     <h1>Step through the Gate as yourself.</h1>
-    <p>Upload a selfie. ComfyUI turns you into a Gatecrasher, directs your own trailer, and drops you into an endless run of Gates.</p>
+    <p>Upload a selfie. ComfyUI turns you into a Gatecrasher and directs your own anime trailer. Then the Gates open, one after another, each harder than the last. <b style="color:var(--ink)">How many can you crash?</b></p>
     <label class="field" for="nameIn">Crasher name</label>
     <input type="text" id="nameIn" maxlength="16" placeholder="Your name" autocomplete="off">
     <label class="field" style="margin-top:12px">Arena</label>
@@ -321,6 +328,7 @@ const isTouch = matchMedia('(pointer: coarse)').matches;
 let mode = 'menu', T = 0, last = performance.now();
 let hunterName = 'Crasher', portrait = null, selfieImg = null, clipURL = null, clipIsVideo = false, clipPlate = false, clipPromise = null, usedComfy = false;
 const routesUsed = {};
+const PLAY_URL = location.protocol === 'https:' ? location.origin + location.pathname.replace(/[^/]*$/, '') : 'https://luciddreamcenter1-design.github.io/gate-run/';
 let trailer = null;
 let P = null, S = null, enemies = [], shards = [], parts = [], texts = [], slashes = [];
 
@@ -938,7 +946,7 @@ function drawEnemy(e) {
   if (e.type !== 'imp') { const w = e.r * 2; g.fillStyle = '#2b2550'; g.fillRect(e.x - w / 2, e.y - e.r - 14, w, 4); g.fillStyle = e.type === 'boss' ? '#ffd84a' : '#ff4d6d'; g.fillRect(e.x - w / 2, e.y - e.r - 14, w * clamp(e.hp / e.maxhp, 0, 1), 4); }
 }
 function drawHUD() {
-  const top = 14 + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0);
+  const top = 14 + ($('#safeTop').offsetHeight || 0);   // below the notch / Dynamic Island
   g.fillStyle = 'rgba(16,13,30,.8)'; g.strokeStyle = '#2b2550'; g.lineWidth = 1;
   roundRect(12, top, 196, 62, 12); g.fill(); g.stroke();
   drawPortraitHead(43, top + 31, 22, '#38d6ff');
@@ -1058,7 +1066,7 @@ function drawOverlay() {
   if (mode === 'play' && !(S && S.cine)) {
     drawHUD();
     if (joy && !joy.mouse) { g.strokeStyle = 'rgba(56,214,255,.35)'; g.lineWidth = 2; g.beginPath(); g.arc(joy.ox, joy.oy, 50, 0, 6.283); g.stroke(); const jx = joy.x - joy.ox, jy = joy.y - joy.oy, m = Math.min(50, Math.hypot(jx, jy)), a = Math.atan2(jy, jx); g.fillStyle = 'rgba(56,214,255,.45)'; g.beginPath(); g.arc(joy.ox + Math.cos(a) * m, joy.oy + Math.sin(a) * m, 20, 0, 6.283); g.fill(); }
-    if (S.elapsed < 7) { g.fillStyle = 'rgba(238,240,255,.75)'; g.font = '500 14px Inter'; g.textAlign = 'center'; g.fillText(isTouch ? 'Drag to move · ATK to slash (tap 3× for a combo) · DASH · SP when full' : 'WASD move · J / click = slash (3-hit combo) · SPACE dash · L special', W / 2, H - 28); g.textAlign = 'left'; }
+    if (S.elapsed < 7) { g.fillStyle = 'rgba(238,240,255,.75)'; g.font = '500 14px Inter'; g.textAlign = 'center'; (isTouch ? ['Drag the left side to move', 'ATK ×3 = combo · DASH dodges · SP when full'] : ['WASD move · J / click = slash (3-hit combo) · SPACE dash · L special']).forEach((ln, i, arr) => g.fillText(ln, W / 2, (isTouch ? H - 190 : H - 28) - (arr.length - 1 - i) * 20)); g.textAlign = 'left'; }
   }
   drawCine();
   drawSysMsg();
@@ -1151,7 +1159,7 @@ async function shareOrSave(blob, name, text) {
 $('#bReel').onclick = async () => {
   try {
     const blob = await renderOnce('Reel', reelSegments(), null);
-    if (blob) shareOrSave(blob, 'gate-run-reel-' + slug() + ext(blob), hunterName + ' crashed ' + S.gate + ' Gates (' + rankOf() + '). Beat that. #OpenSourceHiggsfield');
+    if (blob) shareOrSave(blob, 'gate-run-reel-' + slug() + ext(blob), 'I crashed ' + S.gate + ' Gates as a ' + rankOf() + ' Gatecrasher. How many can you crash? ' + PLAY_URL + ' #OpenSourceHiggsfield');
   } catch (e) { console.warn(e); toast('Could not render the Reel: ' + e.message); }
 };
 
@@ -1182,7 +1190,7 @@ async function shareLicense() {
   try {
     if (clipURL) { const c = await (await fetch(clipURL)).blob(); files.push(new File([c], 'gate-opening.' + (clipIsVideo ? 'mp4' : 'webp'), { type: c.type })); }
     if (!navigator.canShare(files.length > 1 ? { files } : { files: files.slice(0, 1) })) files.splice(1);
-    await navigator.share({ files, text: hunterName + ' crashed ' + S.gate + ' Gates (' + rankOf() + '). Beat that. #OpenSourceHiggsfield' });
+    await navigator.share({ files, text: 'I crashed ' + S.gate + ' Gates as a ' + rankOf() + ' Gatecrasher. How many can you crash? ' + PLAY_URL + ' #OpenSourceHiggsfield' });
   } catch (e) { if (e.name !== 'AbortError') toast('Share failed. Save it instead.'); }
 }
 $('#bShare').onclick = shareLicense;

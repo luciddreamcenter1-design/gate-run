@@ -23,7 +23,7 @@ try {
 
 if (renderer) {
   document.body.prepend(canvas);
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.25 : 1.5));   // phones/tablets: lighter fill rate
   renderer.toneMapping = THREE.NeutralToneMapping;   // keeps the player's face colors true
   renderer.toneMappingExposure = 1.05;
 
