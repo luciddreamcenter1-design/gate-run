@@ -77,6 +77,99 @@
           "motion": "Locked-off static camera, the boss stays centered. The demon lord lifts the huge violet cleaver overhead and slams it down to the right in a devastating strike with an explosion of violet energy, then rises again. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, heavy powerful motion."
         }
       }
+    },
+    "kira": {
+      "keyframe": "Full-body side view of a young woman with short silver hair and sharp amber eyes, fitted black tactical jacket with glowing crimson trim, holding two glowing crimson daggers in a low ready stance, body turned to the right, face visible in three-quarter view. The entire body is visible from head to feet with empty space all around, small in the center of the frame. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
+      "moves": {
+        "idle": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the character stays centered and the same size. Idle combat stance: slow breathing, coat and hair sway gently, the two glowing crimson daggers glows. The character does not move from its spot. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, smooth motion."
+        },
+        "run": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the character stays centered and the same size. The character runs in place facing right, a fast anime sprint cycle with the coat flowing back, two glowing crimson daggers held low, like running on a treadmill without moving across the frame. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, smooth fast motion."
+        },
+        "combo": {
+          "frames": 73,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character performs a fast three-hit combo with two glowing crimson daggers to the right: a horizontal slash, a rising backhand slash, then a powerful downward cleave, each with a glowing crimson energy trail, then returns to the ready stance. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, sharp fast motion with smear frames.",
+          "maxf": 32
+        },
+        "dash": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character crouches and performs a lightning-fast forward dash to the right, body low and leaning forward, coat whipping back, crimson energy streaks, then recovers to the ready stance in place. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, very fast motion."
+        },
+        "special": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character gathers power as crimson energy erupts around it, eyes glowing, then spins and unleashes a whirlwind of crimson dagger slashes to the right, then holds the finishing pose. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, dramatic powerful motion."
+        }
+      }
+    },
+    "brann": {
+      "keyframe": "Full-body side view of a tall muscular man with a buzzcut and a short beard, armored black coat with glowing gold trim, huge glowing gold rift gauntlets on both fists, in a boxer's ready stance, body turned to the right, face visible in three-quarter view. The entire body is visible from head to feet with empty space all around, small in the center of the frame. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
+      "moves": {
+        "idle": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the character stays centered and the same size. Idle combat stance: slow breathing, coat and hair sway gently, the glowing gold rift gauntlets glows. The character does not move from its spot. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, smooth motion."
+        },
+        "run": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the character stays centered and the same size. The character runs in place facing right, a fast anime sprint cycle with the coat flowing back, glowing gold rift gauntlets held low, like running on a treadmill without moving across the frame. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, smooth fast motion."
+        },
+        "combo": {
+          "frames": 73,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character performs a fast three-hit punch combo to the right: a jab, a hook, then a rising uppercut, each with a glowing gold energy trail, then returns to the ready stance. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, sharp fast motion with smear frames.",
+          "maxf": 32
+        },
+        "dash": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character crouches and performs a lightning-fast forward dash to the right, body low and leaning forward, coat whipping back, gold energy streaks, then recovers to the ready stance in place. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, very fast motion."
+        },
+        "special": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character gathers power as gold energy erupts around it, eyes glowing, then slams both gauntlets together and punches forward, releasing a huge golden shockwave to the right, then holds the finishing pose. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, dramatic powerful motion."
+        }
+      }
+    },
+    "vex": {
+      "keyframe": "Full-body side view of an androgynous fighter with long black hair tied back and violet eyes, long dark cloak with glowing violet trim, holding a long glowing violet energy spear in a ready stance, body turned to the right, face visible in three-quarter view. The entire body is visible from head to feet with empty space all around, small in the center of the frame. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
+      "moves": {
+        "idle": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the character stays centered and the same size. Idle combat stance: slow breathing, coat and hair sway gently, the a glowing violet energy spear glows. The character does not move from its spot. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, smooth motion."
+        },
+        "run": {
+          "frames": 49,
+          "loop": true,
+          "motion": "Locked-off static camera, the character stays centered and the same size. The character runs in place facing right, a fast anime sprint cycle with the coat flowing back, a glowing violet energy spear held low, like running on a treadmill without moving across the frame. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, smooth fast motion."
+        },
+        "combo": {
+          "frames": 73,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character performs a fast three-hit combo with a glowing violet energy spear to the right: a fast thrust, a sweeping spin slash, then a powerful lunging stab, each with a glowing violet energy trail, then returns to the ready stance. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, sharp fast motion with smear frames.",
+          "maxf": 32
+        },
+        "dash": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character crouches and performs a lightning-fast forward dash to the right, body low and leaning forward, coat whipping back, violet energy streaks, then recovers to the ready stance in place. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, very fast motion."
+        },
+        "special": {
+          "frames": 49,
+          "loop": false,
+          "motion": "Locked-off static camera, the character stays centered. The character gathers power as violet energy erupts around it, eyes glowing, then spins the spear overhead and thrusts it forward, launching a piercing violet energy beam to the right, then holds the finishing pose. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, dramatic powerful motion."
+        }
+      }
     }
   }
 }

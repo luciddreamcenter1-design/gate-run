@@ -117,6 +117,138 @@
      "loop": false
     }
    }
+  },
+  "kira": {
+   "anchor": {
+    "top": 0.0486,
+    "foot": 0.9688,
+    "cx": 0.5156
+   },
+   "anims": {
+    "idle": {
+     "img": "kira_idle.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": true
+    },
+    "run": {
+     "img": "kira_run.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": true
+    },
+    "combo": {
+     "img": "kira_combo.png",
+     "cols": 8,
+     "rows": 4,
+     "n": 32,
+     "loop": false
+    },
+    "dash": {
+     "img": "kira_dash.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 13,
+     "loop": false
+    },
+    "special": {
+     "img": "kira_special.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": false
+    }
+   }
+  },
+  "brann": {
+   "anchor": {
+    "top": 0.0833,
+    "foot": 0.9549,
+    "cx": 0.4479
+   },
+   "anims": {
+    "idle": {
+     "img": "brann_idle.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": true
+    },
+    "run": {
+     "img": "brann_run.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": true
+    },
+    "combo": {
+     "img": "brann_combo.png",
+     "cols": 8,
+     "rows": 4,
+     "n": 32,
+     "loop": false
+    },
+    "dash": {
+     "img": "brann_dash.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": false
+    },
+    "special": {
+     "img": "brann_special.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 14,
+     "loop": false
+    }
+   }
+  },
+  "vex": {
+   "anchor": {
+    "top": 0.1667,
+    "foot": 0.9271,
+    "cx": 0.4948
+   },
+   "anims": {
+    "idle": {
+     "img": "vex_idle.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": true
+    },
+    "run": {
+     "img": "vex_run.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": true
+    },
+    "combo": {
+     "img": "vex_combo.png",
+     "cols": 8,
+     "rows": 4,
+     "n": 32,
+     "loop": false
+    },
+    "dash": {
+     "img": "vex_dash.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": false
+    },
+    "special": {
+     "img": "vex_special.png",
+     "cols": 8,
+     "rows": 2,
+     "n": 16,
+     "loop": false
+    }
+   }
   }
  }
 }

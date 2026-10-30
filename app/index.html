@@ -90,7 +90,9 @@ a{color:var(--gate2)}
     <p>Upload a selfie. ComfyUI turns you into a Gatecrasher and directs your own anime trailer. Then the Gates open, one after another, each harder than the last. <b style="color:var(--ink)">How many can you crash?</b></p>
     <label class="field" for="nameIn">Crasher name</label>
     <input type="text" id="nameIn" maxlength="16" placeholder="Your name" autocomplete="off">
-    <label class="field" style="margin-top:12px">Arena</label>
+    <label class="field" style="margin-top:12px">Crasher</label>
+    <div class="arenas" id="rosterRow"></div>
+    <label class="field">Arena</label>
     <div class="arenas" id="arenaRow"></div>
     <input type="file" id="arenaIn" accept="image/*" hidden>
     <input type="file" id="fileIn" accept="image/*" capture="user" hidden>
@@ -174,7 +176,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /* ---------- audio: ElevenLabs sound kit (pre-generated via Comfy Router, see app/audio) ---------- */
-const SOUNDS = ['sfx_riser','sfx_braam','sfx_gate_open','sfx_slash','sfx_hit','sfx_dash','sfx_shard','sfx_levelup','sfx_boss','sfx_hurt','sfx_win','sfx_lose','sfx_whoosh','music_loop','vo_gate_open','vo_boss','vo_levelup','vo_cleared','vo_fallen','vo_clip_ready'];
+const SOUNDS = ['sfx_riser','sfx_braam','sfx_gate_open','sfx_slash','sfx_hit','sfx_dash','sfx_shard','sfx_levelup','sfx_boss','sfx_hurt','sfx_win','sfx_lose','sfx_whoosh','music_loop','vo_gate_open','vo_boss','vo_levelup','vo_cleared','vo_fallen','vo_clip_ready','vo_ren','vo_kira','vo_brann','vo_vex','vo_versus','vo_fight','vo_ko','vo_challenger','vo_choose'];
 const AK = {
   ctx: null, buf: {}, master: null, musicGain: null, musicSrc: null, recDest: null, last: {},
   init() {
@@ -406,9 +408,50 @@ $('#arenaIn').onchange = async e => {
 { const saved = (() => { try { return localStorage.getItem('arena'); } catch (e) { return null; } })(), a = ARENAS.find(x => x.id === saved) || ARENAS[0];
   renderArenaRow(a.id); applyArena({ id: a.id, image: 'arenas/' + a.id + '.jpg', video: 'arenas/' + a.id + '_loop.mp4', tint: a.tint }); }
 
+/* ---------- roster: shipped Crashers (FLUX 3 bodies + LTX-2 movesets + voiced lines), free for everyone ---------- */
+const ROSTER = [
+  { id: 'ren',   name: 'Ren',   quote: "One Gate or a hundred. I don't stop.", color: '#38d6ff' },
+  { id: 'kira',  name: 'Kira',  quote: "Blink, and you'll miss the cut.", color: '#ff4d6d' },
+  { id: 'brann', name: 'Brann', quote: 'Every Gate breaks the same way. Loud.', color: '#ffd84a' },
+  { id: 'vex',   name: 'Vex',   quote: "The rift chose me. I'm returning the favor.", color: '#b18cff' },
+];
+const PERSONAL_QUOTE = "I'm the one the Gates should fear.";
+let rosterPick = (() => { try { return localStorage.getItem('crasher') || 'ren'; } catch (e) { return 'ren'; } })();
+const rosterArt = {};
+for (const r of ROSTER) loadImg('roster/' + r.id + '.jpg').then(img => { const c = document.createElement('canvas'); c.width = c.height = 512; c.getContext('2d').drawImage(img, 0, 0, 512, 512); rosterArt[r.id] = c; }).catch(() => {});
+const fighter = () => personalSprites ? { id: 'you', name: hunterName, quote: PERSONAL_QUOTE, color: '#38d6ff' } : (ROSTER.find(r => r.id === rosterPick) || ROSTER[0]);
+function renderRosterRow() {
+  const row = $('#rosterRow'); row.innerHTML = '';
+  for (const r of ROSTER) {
+    const b = document.createElement('button'); b.className = 'arena' + (r.id === rosterPick && !personalSprites ? ' on' : '');
+    b.innerHTML = `<img src="roster/${r.id}.jpg" alt="" style="height:64px;object-position:center 20%"><span>${r.name}</span>`;
+    b.onclick = () => { rosterPick = r.id; try { localStorage.setItem('crasher', r.id); } catch (e) {} window.useRosterHunter && window.useRosterHunter(r.id); AK.init(); AK.play('vo_' + r.id, 1); renderRosterRow(); };
+    row.appendChild(b);
+  }
+}
+renderRosterRow(); window.pendingRoster = rosterPick;
+// fighting-game intro card: portrait, name and catchphrase, voiced
+let introCard = null;
+function showIntroCard(f, por) { introCard = { f, por, t: 0 }; AK.play(f.id === 'you' ? 'vo_challenger' : 'vo_' + f.id, 1.1); }
+function drawIntroCard(dt) {
+  if (!introCard) return; const c = introCard; c.t += dt; if (c.t > 2.6) { introCard = null; return; }
+  const a = Math.min(1, c.t / .25, (2.6 - c.t) / .35), sl = Math.min(1, c.t / .35), y = H * .64, sz = Math.min(150, W * .3);
+  g.save(); g.globalAlpha = a;
+  g.fillStyle = 'rgba(7,6,13,.78)'; g.fillRect(0, y - sz * .62, W, sz * 1.24);
+  g.fillStyle = c.f.color; g.fillRect(0, y - sz * .62, W * sl, 3); g.fillRect(W * (1 - sl), y + sz * .62 - 3, W * sl, 3);
+  const px = 18 + sz / 2 - (1 - sl) * 200;
+  if (c.por) { g.save(); g.beginPath(); g.arc(px, y, sz / 2, 0, 6.283); g.clip(); g.drawImage(c.por, px - sz / 2, y - sz / 2, sz, sz); g.restore(); g.strokeStyle = c.f.color; g.lineWidth = 3; g.beginPath(); g.arc(px, y, sz / 2, 0, 6.283); g.stroke(); }
+  const tx = px + sz / 2 + 16;
+  g.fillStyle = c.f.color; g.font = '700 ' + Math.round(sz * .32) + 'px "Chakra Petch"'; g.textAlign = 'left'; g.fillText(c.f.name.toUpperCase(), tx, y - sz * .08);
+  g.fillStyle = '#eef0ff'; g.font = 'italic 500 ' + Math.round(Math.max(13, sz * .12)) + 'px Inter';
+  const words = ('“' + c.f.quote + '”').split(' '); let line = '', ly = y + sz * .18; const maxW = W - tx - 14;
+  for (const w of words) { if (g.measureText(line + w).width > maxW && line) { g.fillText(line, tx, ly); line = ''; ly += sz * .16; } line += w + ' '; } g.fillText(line, tx, ly);
+  g.restore();
+}
+
 /* ---------- start / forge ---------- */
 $('#bSelfie').onclick = () => $('#fileIn').click();
-$('#bGuest').onclick = () => { personalSprites = null; window.resetHunterSprites && window.resetHunterSprites(); hunterName = $('#nameIn').value.trim() || 'Guest Crasher'; portrait = guestPortrait || guestAvatar(); usedComfy = false; clipURL = null; trailer = null; beginIntro(); };
+$('#bGuest').onclick = () => { personalSprites = null; window.resetHunterSprites && window.resetHunterSprites(); const rf = ROSTER.find(r => r.id === rosterPick) || ROSTER[0]; window.useRosterHunter && window.useRosterHunter(rf.id); hunterName = $('#nameIn').value.trim() || rf.name; portrait = rosterArt[rf.id] || guestPortrait || guestAvatar(); usedComfy = false; clipURL = null; trailer = null; beginIntro(); };
 // guest face: cropped from the default manhwa Crasher's full-body keyframe (falls back to a drawn avatar)
 let guestPortrait = null;
 loadImg('sprites/src/hunter_body.png').then(img => { const w = img.naturalWidth, h = img.naturalHeight, c = document.createElement('canvas'); c.width = c.height = 512;
@@ -514,7 +557,7 @@ async function forgeMoveset(hunterBlob) {
     const baked = await Promise.all(got.map(([m, url]) => bakeMove(url, moves[m]).then(b => [m, b]).catch(e => (console.warn('bake', m, e), null))));
     for (const r of baked.filter(Boolean)) { const [m, b] = r; set.anims[m] = b.anim; if (!set.anchor || m === 'idle') set.anchor = b.anchor; }
     if (!Object.keys(set.anims).length) throw new Error('could not bake moves');
-    personalSprites = set;
+    personalSprites = set; renderRosterRow();
     if (window.setHunterSprites) window.setHunterSprites(set);
     setStep(4, 'done', 'Your Crasher moves like you · ' + got.length + ' LTX-2 moves');
     if (mode === 'play') { sysMsg('[RIFT OS] Crasher form synchronized.'); S.flash = .8; burst(P.x, P.y, '#38d6ff', 40, 260); AK.play('levelup', .8); }
@@ -598,7 +641,8 @@ function beginIntro() {
         gate: 0, phase: 'break', breakT: 2.2, toSpawn: 0, brutes: 0 };
   P.weapon = null;
   sysMsg('[RIFT OS] A Gate has opened.');
-  AK.play('gate_open', .8); setTimeout(() => AK.vo('vo_gate_open'), 600); AK.music(.32);
+  AK.play('gate_open', .8); AK.music(.32);
+  setTimeout(() => showIntroCard(fighter(), personalSprites ? portrait : (rosterArt[rosterPick] || portrait)), 350);
 }
 function startPlay() { mode = 'play'; document.querySelectorAll('.tbtn').forEach(b => b.style.display = isTouch ? 'block' : 'none'); GameRec.start(7, 'opener'); }
 function sysMsg(m) { if (S) { S.msg = m; S.msgT = 2.6; } }
@@ -1110,6 +1154,7 @@ function drawOverlay() {
   }
   drawCine();
   drawSysMsg();
+  drawIntroCard(1 / 60);
 }
 
 function loop(now) {
@@ -1240,7 +1285,7 @@ $('#bNew').onclick = () => { mode = 'menu'; show('sStart'); };
 $('#keyLink').onclick = e => { e.preventDefault(); const b = $('#keyBox'); b.style.display = b.style.display === 'none' ? 'block' : 'none'; $('#keyIn').value = userKey(); };
 $('#keySave').onclick = () => { const k = $('#keyIn').value.trim(); if (!/^comfyui-/.test(k)) return toast('That does not look like a Comfy key (comfyui-…)'); try { localStorage.setItem('comfyKey', k); } catch (e) {} $('#keyBox').style.display = 'none'; toast('Key saved in this browser'); detectComfy(); };
 $('#keyClear').onclick = () => { try { localStorage.removeItem('comfyKey'); } catch (e) {} $('#keyIn').value = ''; toast('Key removed'); detectComfy(); };
-$('#bDuel').onclick = () => { hunterName = $('#nameIn').value.trim() || hunterName || 'Crasher'; if (!portrait) portrait = guestPortrait || guestAvatar(); AK.init(); Duel.host(); };
+$('#bDuel').onclick = () => { const f = fighter(); hunterName = $('#nameIn').value.trim() || (personalSprites ? hunterName : f.name); if (!personalSprites) { portrait = rosterArt[f.id] || guestPortrait || guestAvatar(); window.useRosterHunter && window.useRosterHunter(f.id); } AK.init(); Duel.host(); };
 $('#duelCopy').onclick = async () => { try { await navigator.clipboard.writeText($('#duelLink').value); toast('Link copied'); } catch (e) { $('#duelLink').select(); } };
 $('#duelShare').onclick = async () => { const url = $('#duelLink').value, text = hunterName + ' challenged you to a Gate Run 1v1. Think you can take me?';
   if (navigator.share) { try { await navigator.share({ title: 'Gate Run 1v1', text, url }); } catch (e) {} } else { try { await navigator.clipboard.writeText(text + ' ' + url); toast('Invite copied'); } catch (e) {} } };
@@ -1251,7 +1296,7 @@ $('#duelExit').onclick = () => Duel.exit();
 { const duelId = new URLSearchParams(location.search).get('duel');
   if (duelId) { show('sDuel'); $('#duelTitle').textContent = 'You have been challenged'; $('#duelSub').textContent = 'A Crasher is waiting in their arena. Enter your name and step in.';
     $('#duelLinkRow').innerHTML = '<input type="text" id="duelName" maxlength="16" placeholder="Your name" autocomplete="off">'; $('#duelAccept').style.display = ''; $('#duelStatus').textContent = 'Ready when you are';
-    $('#duelAccept').onclick = () => { hunterName = ($('#duelName').value || '').trim() || 'Challenger'; if (!portrait) portrait = guestPortrait || guestAvatar(); AK.init(); $('#duelAccept').style.display = 'none'; Duel.join(duelId); }; } }
+    $('#duelAccept').onclick = () => { const f = fighter(); hunterName = ($('#duelName').value || '').trim() || (personalSprites ? hunterName : f.name); if (!personalSprites) { portrait = rosterArt[f.id] || guestPortrait || guestAvatar(); window.useRosterHunter && window.useRosterHunter(f.id); } AK.init(); $('#duelAccept').style.display = 'none'; Duel.join(duelId); }; } }
 detectComfy();
 </script>
 <script src="director.js"></script>

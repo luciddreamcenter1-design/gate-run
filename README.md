@@ -15,7 +15,9 @@ An open-source rebuild of the "put yourself in the shot" apps, made for Comfy's 
 1. **FLUX 3 image edit** (via Comfy Router) turns your selfie into a Gatecrasher who still looks like you.
 2. **A personalized 3-shot trailer** renders while you play. FLUX 3 makes keyframes from your Crasher, and **LTX-2 image-to-video + camera LoRA** (a ComfyUI workflow on Comfy Cloud) animates each shot with sound. An ElevenLabs narrator says your name, and FLUX Video Upscale finishes the shots at 1056×1920. The page cuts it together with title cards, grade, grain and letterbox.
 3. A 75-second **HD-2D action game**. Your Crasher is a full-body, semi-realistic manhwa-style character animated by LTX-2: FLUX 3 draws your body on green, LTX-2 animates idle, run, a 3-hit katana combo, dash and a special, and the browser keys and bakes them into sprite sheets. Real combat: manual combos with aim assist, dash with invincibility frames, a special-meter ultimate, enemies that telegraph and lunge, juggles, hit-stop, and a combo counter. Enemies and the boss are LTX-animated too. It has a boss entrance cinematic (letterbox, slow motion, camera swoop), hit-stop, and a full ElevenLabs sound kit with a "[RIFT OS]" narrator.
-4. **One-tap Reel:** a vertical 1080×1920 MP4 of your trailer, your actual gameplay and your Crasher Pass card, ready for TikTok/Reels. You can also save the trailer and the license card on their own.
+4. **Free roster + online 1v1.** Pick Ren, Kira, Brann or Vex, four original Crashers whose full-body movesets were animated by LTX-2 and ship with the game, so anyone can play free. Each has a voiced catchphrase on a fighting-game intro card. **⚔ 1v1 a friend online**: send a link, and you fight live, peer-to-peer in the browser (no game server), with a VS splash, a K.O. cinematic, and a shareable victory card.
+5. **Arenas:** four living arenas (FLUX 3 art + LTX-2 ambient loops), or **upload a photo of your own place** and ComfyUI turns it into a rift-torn battleground.
+6. **One-tap Reel:** a vertical 1080×1920 MP4 of your trailer, your actual gameplay and your Crasher Pass card, ready for TikTok/Reels. You can also save the trailer and the license card on their own.
 
 Full spec: [SPEC.md](SPEC.md) · Demo video script: [DEMO_SCRIPT.md](DEMO_SCRIPT.md)
 
@@ -38,7 +40,7 @@ No key and no ComfyUI? The game still runs in **preview mode** (in-browser toon 
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/luciddreamcenter1-design/gate-run)
 
-1. Click the button, sign in to Render, and paste your `COMFY_API_KEY` when it asks. The key stays in Render's settings and is never in the repo.
+1. Click the button and sign in to Render. When it asks for `COMFY_API_KEY`, you can **leave it blank to host for free**: everyone plays the shipped roster, arenas and 1v1, and visitors who add their own Comfy key get the personal selfie pipeline on their own credits. If you do paste a key, it stays in Render's settings and is never in the repo.
 2. Render builds from `render.yaml` and gives you an `https://…onrender.com` link that works on phones (camera upload, share sheet).
 
 How credits work on a public link:

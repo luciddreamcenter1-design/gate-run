@@ -1,6 +1,6 @@
 # One-click hosting: https://render.com/deploy?repo=https://github.com/luciddreamcenter1-design/gate-run
-# Render asks for COMFY_API_KEY during setup (it is never committed). Visitors get a free tier on that key;
-# anyone can paste their own key in the app for the full trailer and no limits.
+# Render asks for COMFY_API_KEY during setup. Leave it blank to host for free (shipped roster, arenas, 1v1;
+# visitors can paste their own Comfy key in the app). If set, visitors get a capped free tier on it. Never committed.
 services:
   - type: web
     name: gate-run

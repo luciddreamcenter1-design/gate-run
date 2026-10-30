@@ -7,6 +7,8 @@ const Duel = (() => {
   const DMG = { 1: 8, 2: 8, 3: 15, sp: 28 };
   let peer = null, conn = null, role = null, F = null, events = [], phase = 'idle', phaseT = 0, winner = -1;
   let myIn = null, remIn = null, sendT = 0, rival = null, rivalName = 'Rival', rivalPortrait = null, resultCard = null, rematchAsked = false;
+  let rivalRoster = null, rivalQuote = '', vsFlags = {};
+  const COUNT = 4.2;
 
   const mkF = side => ({ x: side ? 150 : -150, y: 0, face: side ? -1 : 1, state: 'free', st: 0, step: 0, buf: false, comboT: 0, hp: HP, sp: 0,
     inv: 0, flash: 0, vx: 0, hit: 0, dashCD: 0, ddx: 0, ddy: 0, hitDone: false, moving: false, a: 0, d: 0, s: 0, anim: { name: 'idle', t: 0, p: undefined } });
@@ -73,9 +75,13 @@ const Duel = (() => {
   /* ---------- per frame ---------- */
   function update(dt) {
     phaseT += dt;
+    if (phase === 'count') {
+      if (phaseT > .25 && !vsFlags.v) { vsFlags.v = 1; AK.play('vo_versus', 1.1); }
+      if (phaseT > 1.1 && !vsFlags.r) { vsFlags.r = 1; AK.play(rivalRoster ? 'vo_' + rivalRoster : 'vo_challenger', 1.1); }
+    } else vsFlags = {};
     readLocalInput();
     if (role === 'host' && F) {
-      if (phase === 'count' && phaseT > 3) { phase = 'fight'; phaseT = 0; events.push({ k: 'fight' }); }
+      if (phase === 'count' && phaseT > COUNT) { phase = 'fight'; phaseT = 0; events.push({ k: 'fight' }); }
       if (phase === 'fight' || phase === 'ko') { const slow = phase === 'ko' ? .3 : 1; step(F[0], myIn, F[1], dt * slow, 0); step(F[1], remIn, F[0], dt * slow, 1); }
       if (phase === 'ko' && phaseT > 2.2) { phase = 'result'; phaseT = 0; events.push({ k: 'result', w: winner }); }
       for (const ev of events) handleEvent(ev);
@@ -116,8 +122,8 @@ const Duel = (() => {
     else if (ev.k === 'dash') { const p = abs(ev.i); burst(p.x, p.y, '#38d6ff', 14, 160); AK.play('dash', .5); }
     else if (ev.k === 'spstart') { AK.play('riser', .6); if (mine) S.cine = { t: 0, dur: 1.1, slow: 0, title: 'GATE SLASH', sub: hunterName.toUpperCase() }; }
     else if (ev.k === 'spfire') { const f = F[ev.i]; slashes.push({ x: W / 2 + f.x + f.face * 120, y: H / 2 + f.y, face: f.face, step: 1, big: true, ang: 0, life: .5, max: .5 }); S.flash = .8; S.shake = 22; AK.play('braam', 1); }
-    else if (ev.k === 'fight') { S.cine = { t: 0, dur: 1, slow: 0, title: 'FIGHT!', sub: '' }; AK.play('braam', .9); }
-    else if (ev.k === 'ko') { S.cine = { t: 0, dur: 2.2, slow: 0, title: 'K.O.', sub: (ev.w === meIdx() ? hunterName : rivalName).toUpperCase() + ' WINS' }; S.flash = 1; AK.play('braam', 1); AK.play(ev.w === meIdx() ? 'win' : 'lose', .8); }
+    else if (ev.k === 'fight') { S.cine = { t: 0, dur: 1, slow: 0, title: 'FIGHT!', sub: '' }; AK.play('braam', .9); AK.play('vo_fight', 1.1); }
+    else if (ev.k === 'ko') { S.cine = { t: 0, dur: 2.2, slow: 0, title: 'K.O.', sub: (ev.w === meIdx() ? hunterName : rivalName).toUpperCase() + ' WINS' }; S.flash = 1; AK.play('braam', 1); AK.play('vo_ko', 1.1); AK.play(ev.w === meIdx() ? 'win' : 'lose', .8); }
     else if (ev.k === 'result') showResult(ev.w);
   }
 
@@ -137,15 +143,33 @@ const Duel = (() => {
     };
     bar(10, me, hunterName, portrait, false); bar(W - bw - 62, them, rivalName, rivalPortrait, true);
     g.textAlign = 'center'; g.fillStyle = '#ffd84a'; g.font = '700 16px "Chakra Petch"'; g.fillText('VS', W / 2, top + 32);
-    if (phase === 'count') { const n = Math.ceil(3 - phaseT); g.font = '700 96px "Chakra Petch"'; g.fillStyle = '#eef0ff'; g.shadowColor = '#38d6ff'; g.shadowBlur = 30; g.fillText(n > 0 ? n : '', W / 2, H * .45); g.shadowBlur = 0; }
+    if (phase === 'count') vsSplash();
     const rp = screenPos(rival.x, rival.y); g.font = '700 12px "Chakra Petch"'; g.fillStyle = '#ff9aa8'; g.fillText(rivalName.slice(0, 14), rp.x, rp.y + 20);
     if ($('#spBtn')) $('#spBtn').classList.toggle('ready', me.sp >= 100);
     g.textAlign = 'left';
   }
 
+  function vsSplash() {
+    const t = phaseT, a = Math.min(1, t / .3, (COUNT - .2 - t) / .4), sz = Math.min(W * .38, H * .26, 220), mid = H * .46;
+    if (a <= 0) return;
+    g.save(); g.globalAlpha = Math.max(0, a); g.fillStyle = 'rgba(7,6,13,.72)'; g.fillRect(0, mid - sz * .9, W, sz * 1.95);
+    const side = (por, nm, q, col, left) => {
+      const k = Math.min(1, t / .45), x = left ? W * .27 - (1 - k) * W * .5 : W * .73 + (1 - k) * W * .5, y = left ? mid - sz * .12 : mid + sz * .12;
+      if (por) { g.save(); g.beginPath(); g.arc(x, y, sz / 2, 0, 6.283); g.clip(); g.drawImage(por, x - sz / 2, y - sz / 2, sz, sz); g.restore(); }
+      g.strokeStyle = col; g.lineWidth = 4; g.shadowColor = col; g.shadowBlur = 20; g.beginPath(); g.arc(x, y, sz / 2, 0, 6.283); g.stroke(); g.shadowBlur = 0;
+      g.textAlign = 'center'; g.fillStyle = col; g.font = '700 ' + Math.round(sz * .2) + 'px "Chakra Petch"'; g.fillText(nm.toUpperCase().slice(0, 12), x, y + sz * .5 + sz * .2);
+      if (q && t > (left ? .5 : 1.1)) { g.fillStyle = '#eef0ff'; g.font = 'italic 500 ' + Math.round(Math.max(11, sz * .075)) + 'px Inter'; g.fillText('“' + q + '”', clamp(x, W * .3, W * .7), y + sz * .5 + sz * .33); }
+    };
+    side(portrait, hunterName, myQuote(), '#38d6ff', true); side(rivalPortrait, rivalName, rivalQuote, '#ff4d6d', false);
+    g.textAlign = 'center'; g.fillStyle = '#ffd84a'; g.shadowColor = '#ffd84a'; g.shadowBlur = 30; g.font = '700 ' + Math.round(sz * .45) + 'px "Chakra Petch"'; g.fillText('VS', W / 2, mid + sz * .14); g.shadowBlur = 0;
+    if (t > 2.8) { g.fillStyle = '#eef0ff'; g.font = '700 ' + Math.round(sz * .22) + 'px "Chakra Petch"'; g.fillText('READY', W / 2, mid + sz * .95); }
+    g.restore();
+  }
+  const myQuote = () => (typeof fighter === 'function' ? fighter().quote : '');
+
   /* ---------- networking ---------- */
   const profile = async () => {
-    const p = { t: 'hello', name: hunterName, portrait: portrait ? portrait.toDataURL('image/jpeg', .8) : null, sprites: null };
+    const p = { t: 'hello', name: hunterName, portrait: portrait ? portrait.toDataURL('image/jpeg', .8) : null, sprites: null, roster: window.personalSprites ? null : rosterPick, quote: myQuote() };
     if (window.personalSprites) {   // send my own animated Crasher at half resolution
       const half = c => { const h = document.createElement('canvas'); h.width = c.width / 2; h.height = c.height / 2; h.getContext('2d').drawImage(c, 0, 0, h.width, h.height); return h.toDataURL('image/png'); };
       p.sprites = { anchor: personalSprites.anchor, anims: Object.fromEntries(Object.entries(personalSprites.anims).map(([k, a]) => [k, { img: half(a.canvas), cols: a.cols, rows: a.rows, n: a.n, loop: a.loop }])) };
@@ -154,13 +178,13 @@ const Duel = (() => {
     return p;
   };
   async function onHello(d) {
-    rivalName = d.name || 'Rival';
+    rivalName = d.name || 'Rival'; rivalRoster = d.roster || null; rivalQuote = d.quote || '';
     if (d.portrait) rivalPortrait = await loadImg(d.portrait).catch(() => null);
     if (d.sprites && window.setRivalSprites) {
       const anims = {};
       for (const [k, a] of Object.entries(d.sprites.anims)) { const img = await loadImg(a.img); const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0); anims[k] = { canvas: c, cols: a.cols, rows: a.rows, n: a.n, loop: a.loop }; }
       window.setRivalSprites({ anchor: d.sprites.anchor, anims });
-    } else if (window.setRivalSprites) window.setRivalSprites(null);
+    } else if (window.setRivalSprites) { window.setRivalSprites(null); window.setRivalRoster && window.setRivalRoster(d.roster); }
     if (d.arena) { const pre = ARENAS.find(a => a.id === d.arena.id && !a.custom); applyArena(pre ? { id: pre.id, image: 'arenas/' + pre.id + '.jpg', video: 'arenas/' + pre.id + '_loop.mp4', tint: pre.tint } : { id: 'rival', image: d.arena.image, tint: d.arena.tint }); }
     if (role === 'host') begin();
   }

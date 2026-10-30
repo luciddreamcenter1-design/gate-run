@@ -238,12 +238,16 @@ if (renderer) {
       for (const [a, A] of Object.entries(d.anims)) SPR.chars[c].anims[a] = { ...A, tex: prepTex(texLoader.load('sprites/' + A.img)) };
     }
     SPR.defaultHunter = SPR.chars.hunter; SPR.ready = true;
+    if (window.pendingRoster) window.useRosterHunter(window.pendingRoster);
     if (window.personalSprites) window.setHunterSprites(window.personalSprites);
   }).catch(e => console.warn('no sprites, using 3D stand-ins', e));
   window.setRivalSprites = set => {
     SPR.chars.rival = set ? { anchor: set.anchor, anims: Object.fromEntries(Object.entries(set.anims).map(([a, A]) => [a, { ...A, tex: prepTex(new THREE.CanvasTexture(A.canvas)) }])) } : null;
     for (const a of actors.values()) if (a.char === 'rival') a.clones = {};
   };
+  // roster: play as a shipped Crasher (ren = the default 'hunter' sheets)
+  window.useRosterHunter = id => { if (!SPR.ready) { window.pendingRoster = id; return; } SPR.chars.hunter = (id && id !== 'ren' && SPR.chars[id]) || SPR.defaultHunter; if (heroActor) heroActor.clones = {}; };
+  window.setRivalRoster = id => { SPR.chars.rival = (id && id !== 'ren' && SPR.chars[id]) || null; for (const a of actors.values()) if (a.char === 'rival') a.clones = {}; };
   window.resetHunterSprites = () => { if (SPR.defaultHunter) { SPR.chars.hunter = SPR.defaultHunter; if (heroActor) heroActor.clones = {}; } };
   // the player's own hunter, baked in the browser from their LTX moves (index.html: bakeHunterSprites)
   window.setHunterSprites = set => {
