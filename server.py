@@ -61,6 +61,7 @@ ROUTES["voice"] = os.environ.get("VOICE_ROUTES", "router:elevenlabs/eleven_v3,ro
 ROUTES["body"] = os.environ.get("BODY_ROUTES", "router:bfl/flux-3-image,router:bfl/flux-kontext-pro")
 ROUTES["move"] = os.environ.get("MOVE_ROUTES", "cloud:moves_ltx2_api.json,local:moves_ltx2_api.json")
 ROUTES["arena"] = os.environ.get("ARENA_ROUTES", "router:bfl/flux-3-image,router:bfl/flux-kontext-pro")
+ROUTES["arenaground"] = os.environ.get("ARENAGROUND_ROUTES", "router:bfl/flux-3-image,router:bfl/flux-kontext-pro")
 ROUTES["arenaloop"] = os.environ.get("ARENALOOP_ROUTES", "cloud:arena_ltx2_api.json,local:arena_ltx2_api.json")
 ROUTES["upscale"] = os.environ.get("UPSCALE_ROUTES", "router:bfl/video-upscale-v1")
 ROUTES = {k: [r.strip() for r in v.split(",") if r.strip()] for k, v in ROUTES.items()}
@@ -304,7 +305,7 @@ def note(job, text):
 
 
 def work(job, stage, img, opts):
-    image_title = "IN_SELFIE" if stage in ("portrait", "keyframe", "body", "arena") else "IN_IMAGE"
+    image_title = "IN_SELFIE" if stage in ("portrait", "keyframe", "body", "arena", "arenaground") else "IN_IMAGE"
     for route in ROUTES[stage]:
         kind, target = route.split(":", 1)
         job.update(route=route, plate=False)
@@ -407,6 +408,8 @@ class Handler(SimpleHTTPRequestHandler):
             opts = {}
             if stage == "arena":   # the player's own place -> battle arena (16:9)
                 opts.update(prompt=ARENAS["upload"].replace("{style}", ARENAS["style"]), aspect="16:9")
+            if stage == "arenaground":   # top-down floor texture for the player's arena room
+                opts.update(prompt=ARENAS["ground"].replace("{style}", ARENAS["style"]), aspect="1:1")
             if stage == "arenaloop":
                 opts.update(prompt=ARENAS["motion"].replace("{style}", ARENAS["style"]))
             if stage in ("body", "move"):

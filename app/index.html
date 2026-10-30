@@ -264,7 +264,7 @@ async function detectComfy() {
 }
 const MODEL_NAME = r => /flux-3/.test(r) ? 'FLUX 3' : /kontext|portrait/.test(r) ? 'FLUX Kontext' : /lora/.test(r) ? 'LTX-2 + LoRA' : /ltx/.test(r) ? 'LTX 2.5' : 'LTX-Video';
 function toDataURL(blob) { return new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); }
-const JOB_LIMIT = { portrait: 300, keyframe: 300, body: 300, voice: 120, clip: 600, move: 900, upscale: 300 };   // seconds before giving up on a stage
+const JOB_LIMIT = { arenaground: 300, portrait: 300, keyframe: 300, body: 300, voice: 120, clip: 600, move: 900, upscale: 300 };   // seconds before giving up on a stage
 async function forgeJob(stage, blob, onNote, extra = {}) {
   const r = await fetch('/api/forge', { method: 'POST', headers: { 'Content-Type': 'application/json', ...keyHeaders() }, body: JSON.stringify({ stage, image: blob ? await toDataURL(blob) : undefined, ...extra }) });
   const { job, error, detail } = await r.json();
@@ -388,13 +388,23 @@ const ARENAS = [
   { id: 'roof', name: 'Skyline Roof', tint: '#3a425b' }, { id: 'ice', name: 'Frozen Rift', tint: '#4c718a' },
 ];
 let arena = null;
+function tileable(img, S = 512) {   // blend the image with a half-offset copy of itself so its edges wrap seamlessly
+  const c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
+  g.drawImage(img, 0, 0, S, S); const a = g.getImageData(0, 0, S, S), o = new Uint8ClampedArray(a.data), h = S / 2;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const w = Math.pow(Math.max(0, 1 - Math.abs(2 * x / S - 1)) * Math.max(0, 1 - Math.abs(2 * y / S - 1)), .6);
+    const i = (y * S + x) * 4, j = (((y + h) % S) * S + (x + h) % S) * 4;
+    for (let k = 0; k < 3; k++) a.data[i + k] = o[i + k] * w + o[j + k] * (1 - w);
+  }
+  g.putImageData(a, 0, 0); return c.toDataURL('image/jpeg', .88);
+}
 function applyArena(a) { arena = a; window.pendingArena = a; if (window.setArena) window.setArena(a); try { localStorage.setItem('arena', a.id || 'city'); } catch (e) {} }
 function renderArenaRow(sel) {
   const row = $('#arenaRow'); row.innerHTML = '';
   for (const a of ARENAS) {
     const b = document.createElement('button'); b.className = 'arena' + (a.id === sel ? ' on' : '');
     b.innerHTML = `<img src="${a.thumb || 'arenas/' + a.id + '_thumb.jpg'}" alt=""><span>${a.name}</span>`;
-    b.onclick = () => { applyArena({ id: a.id, image: a.image || 'arenas/' + a.id + '.jpg', video: a.video || (a.custom ? null : 'arenas/' + a.id + '_loop.mp4'), ground: a.custom ? null : 'arenas/' + a.id + '_ground.jpg', tint: a.tint }); renderArenaRow(a.id); };
+    b.onclick = () => { applyArena({ id: a.id, image: a.image || 'arenas/' + a.id + '.jpg', video: a.video || (a.custom ? null : 'arenas/' + a.id + '_loop.mp4'), ground: a.custom ? a.ground : 'arenas/' + a.id + '_ground.jpg', tint: a.tint }); renderArenaRow(a.id); };
     row.appendChild(b);
   }
   const up = document.createElement('button'); up.className = 'arena up';
@@ -413,9 +423,14 @@ $('#arenaIn').onchange = async e => {
     toast('Turning your place into a battleground · FLUX 3', 60000);
     const a = await forgeJob('arena', blob); mine.image = mine.thumb = a.url;
     applyArena({ id: 'mine', image: a.url, tint: mine.tint }); renderArenaRow('mine');
+    const aBlob = await (await fetch(a.url)).blob();
+    forgeJob('arenaground', aBlob).then(g => loadImg(g.url)).then(img => {   // its own floor texture, made seamless here
+      mine.ground = tileable(img);
+      if (arena && arena.id === 'mine') applyArena({ ...arena, ground: mine.ground });
+    }).catch(e => console.warn('arena ground', e));
     toast('Bringing it to life · LTX-2 (you can start playing)', 6000);
-    const v = await forgeJob('arenaloop', await (await fetch(a.url)).blob()); mine.video = v.url;
-    if (arena && arena.id === 'mine') applyArena({ id: 'mine', image: a.url, video: v.url, tint: mine.tint });
+    const v = await forgeJob('arenaloop', aBlob); mine.video = v.url;
+    if (arena && arena.id === 'mine') applyArena({ id: 'mine', image: a.url, video: v.url, ground: mine.ground, tint: mine.tint });
     toast('Your arena is alive.', 2500);
   } catch (err) { console.warn('arena', err); toast('Could not transform your place: ' + String(err.message || err).slice(0, 90)); }
 };
