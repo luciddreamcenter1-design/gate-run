@@ -13,7 +13,8 @@
 <p align="center">
   <b><a href="https://luciddreamcenter1-design.github.io/gate-run/app/">▶ Play free</a></b> ·
   <a href="https://luciddreamcenter1-design.github.io/gate-run/">Project page</a> ·
-  <a href="https://luciddreamcenter1-design.github.io/gate-run/media/launch.mp4">Watch the 21 s launch video</a>
+  <a href="https://luciddreamcenter1-design.github.io/gate-run/media/launch.mp4">Watch the 21 s launch video</a> ·
+  <a href="https://luciddreamcenter1-design.github.io/gate-run/media/demo.mp4">Demo: how it works (1:44)</a>
 </p>
 
 Built for Comfy's **#OpenSourceHiggsfield** contest. It's an open-source answer to the paid "put yourself in the shot" apps, and it goes further: you don't only get a clip of yourself, you get to *play* as yourself.
