@@ -39,6 +39,8 @@ p{color:var(--muted);line-height:1.5;margin:0 0 16px;font-size:15px}
 .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:12px;padding:14px 16px;font:700 16px/1 "Chakra Petch",sans-serif;letter-spacing:.04em;cursor:pointer;color:#0b0820;background:linear-gradient(90deg,var(--gate2),var(--gate));margin-top:10px}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn:disabled{opacity:.45;cursor:default}
+label.opt{display:none;align-items:center;gap:10px;margin:-2px 0 12px;font-size:13px;color:var(--muted);cursor:pointer;min-height:44px}
+label.opt input{width:18px;height:18px;accent-color:#7c6cff;flex:none}
 label.field{display:block;font-size:12px;color:var(--muted);margin:4px 0 6px;letter-spacing:.06em;text-transform:uppercase}
 input[type=text]{width:100%;background:#0c0a18;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:12px;font:600 16px Inter,sans-serif;-webkit-user-select:text;user-select:text}
 .pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 10px;margin-top:16px}
@@ -101,6 +103,7 @@ a{color:var(--gate2)}
     <input type="file" id="arenaIn" accept="image/*" hidden>
     <input type="file" id="fileIn" accept="image/*" hidden>
     <button class="btn" id="bSelfie">Take or upload a selfie</button>
+    <label class="opt" id="fullOpt"><input type="checkbox" id="fullIn"> Full 3-shot trailer (takes a few minutes longer)</label>
     <button class="btn ghost" id="bGuest">Play as a guest Crasher</button>
     <button class="btn ghost" id="bDuel">⚔ 1v1 a friend online</button>
     <div class="pill"><span class="dot" id="cDot"></span><span id="cTxt">Checking for ComfyUI…</span></div>
@@ -252,7 +255,8 @@ async function detectComfy() {
     if (!comfyOK) throw 0;
     $('#cDot').className = 'dot ok';
     $('#cTxt').textContent = ROUTE_LABEL(ready('portrait').route).split(' · ')[0] + ' connected';
-    $('#tierTxt').textContent = status.tier === 'own' ? '· your key, full trailer + unlimited' : status.tier === 'free' ? '· ' + status.free_left + ' free steps left today (quick trailer)' : '';
+    if (status.tier !== 'free') $('#fullOpt').style.display = 'flex';   // the free tier always gets the quick trailer
+    $('#tierTxt').textContent = status.tier === 'own' ? '· your key, unlimited' : status.tier === 'free' ? '· ' + status.free_left + ' free steps left today (quick trailer)' : '';
   } catch (e) {
     comfyOK = false;
     $('#cDot').className = 'dot warn';
@@ -505,7 +509,7 @@ async function forge(file) {
   clipURL = null; clipPromise = null; clipPlate = false; usedComfy = false; trailer = null; delete routesUsed.portrait; delete routesUsed.clip;
   ['1','2','3','4'].forEach(n => setStep(n, ''));
   setStep(4, '', 'Full-body moveset · LTX-2 on Comfy Cloud');
-  setStep(2, '', 'FLUX 3 image edit'); setStep(3, '', '3-shot trailer · FLUX 3 keyframes + LTX-2 + LoRA');
+  setStep(2, '', 'FLUX 3 image edit'); setStep(3, '', $('#fullIn').checked && !(status && status.tier === 'free') ? '3-shot trailer · FLUX 3 keyframes + LTX-2 + LoRA' : 'Quick 1-shot trailer · LTX-2 + LoRA');
   drawThumb('#hunterThumb', null);
   setStep(1, 'run');
   try { selfieImg = await loadImg(URL.createObjectURL(file)); }
@@ -523,10 +527,12 @@ async function forge(file) {
       // The trailer renders in the background so the player can start right away:
       // shot 1 animates the portrait; shots 2-3 get FLUX 3 keyframes first; all run in parallel.
       const hunterBlob = await (await fetch(res.url)).blob();
-      forgeMoveset(hunterBlob);
       const spec = await fetch('/workflows/trailer.json').then(r => r.json());
-      if (status && status.tier === 'free') spec.shots = spec.shots.slice(0, 1);   // free tier: quick 1-shot trailer
+      if ((status && status.tier === 'free') || !$('#fullIn').checked) spec.shots = spec.shots.slice(0, 1);   // quick 1-shot trailer unless the player chose the full one
       trailer = { spec, shots: spec.shots.map(() => null), narration: null, blob: null };
+      // the trailer goes into the Comfy queue ahead of the move videos: moves wait until every clip is submitted (90 s at most)
+      const sent = spec.shots.map(() => { let r; const p = new Promise(x => r = x); p.r = r; return p; });
+      forgeMoveset(hunterBlob, Promise.race([Promise.all(sent), sleep(90000)]));
       const n = spec.shots.length, count = () => trailer.shots.filter(Boolean).length, t0 = Date.now();
       let busy = false;
       const note = () => setStep(3, 'run', 'Directing your trailer · ' + count() + '/' + n + ' shots · ' + (busy ? 'Comfy Cloud is busy, your shots are queued' : 'LTX-2 + LoRA') + ' · keep playing');
@@ -536,7 +542,7 @@ async function forge(file) {
       clipPromise = Promise.allSettled(spec.shots.map(async (sh, i) => {
         let src = hunterBlob;
         if (sh.keyframe) src = await (await fetch((await forgeJob('keyframe', hunterBlob, null, { shot: i })).url)).blob();
-        const c = await forgeJob('clip', src, watch, { shot: i });
+        const c = await forgeJob('clip', src, j => { sent[i].r(); watch(j); }, { shot: i });
         trailer.shots[i] = c; note();
         if (i === 0) { clipURL = c.url; clipIsVideo = /^video/.test(c.mime || ''); clipPlate = !!c.plate; routesUsed.clip = c.route; }
         // finishing pass: upscale to 1056x1920 (FLUX Video Upscale); saved trailer/Reel use it once it lands
@@ -569,13 +575,14 @@ async function forge(file) {
 $('#bEnter').onclick = () => { AK.init(); if (trailer && trailer.shots.some(Boolean) && !clipPlate) playTrailer(beginIntro); else if (clipURL) playClip(beginIntro); else beginIntro(); };
 /* ---------- your hunter, full body: FLUX 3 keyframe -> LTX-2 moves -> keyed sprite sheets ---------- */
 var personalSprites = null;   // var: visible to world3d.js as window.personalSprites
-async function forgeMoveset(hunterBlob) {
+async function forgeMoveset(hunterBlob, after) {
   const mine = Symbol(); forgeMoveset.cur = mine;
   try {
     setStep(4, 'run', 'Drawing your full body · FLUX 3');
     const ms = await fetch('/workflows/moveset.json').then(r => r.json()), moves = ms.characters.hunter.moves;
     const body = await forgeJob('body', hunterBlob, null, { char: 'hunter' });
     const bodyBlob = await (await fetch(body.url)).blob();
+    await after; if (forgeMoveset.cur !== mine) return;
     let done = 0; const names = Object.keys(moves);
     setStep(4, 'run', 'Animating ' + names.length + ' moves · LTX-2 · 0/' + names.length);
     const got = (await Promise.allSettled(names.map(m => forgeJob('move', bodyBlob, null, { char: 'hunter', move: m })
