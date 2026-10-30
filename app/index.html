@@ -107,7 +107,7 @@ a{color:var(--gate2)}
     <div class="tiny" id="keyRow"><a href="#" id="keyLink">Use my own Comfy key</a> <span id="tierTxt"></span></div>
     <div id="keyBox" style="display:none;margin-top:8px"><input type="text" id="keyIn" placeholder="comfyui-…" autocomplete="off" spellcheck="false">
       <div class="row"><button class="btn ghost" id="keySave">Save key</button><button class="btn ghost" id="keyClear">Remove</button></div>
-      <div class="tiny">Stays in this browser only and is sent just with your own requests. Get one at platform.comfy.org.</div></div>
+      <div class="tiny">Stays in this browser only and is sent just with your own requests. Get one at <a href="https://platform.comfy.org/profile/api-keys" target="_blank" rel="noopener">platform.comfy.org</a>.</div></div>
   </div>
 </section>
 
@@ -256,8 +256,10 @@ async function detectComfy() {
   } catch (e) {
     comfyOK = false;
     $('#cDot').className = 'dot warn';
-    $('#cTxt').textContent = status ? 'No Comfy route ready: set COMFY_API_KEY or start ComfyUI' : 'Preview mode: in-browser filter (run server.py for ComfyUI)';
+    const needKey = status && status.server && status.tier === 'none';   // hosted with no host key: visitors bring their own
+    $('#cTxt').textContent = needKey ? 'Add your Comfy key to forge your own Crasher' : status ? 'No Comfy route ready: set COMFY_API_KEY or start ComfyUI' : 'Preview mode: in-browser filter (run server.py for ComfyUI)';
     $('#keyRow').style.display = status ? '' : 'none';
+    if (needKey) { $('#keyBox').style.display = 'block'; $('#tierTxt').textContent = '· or play free as a guest'; }
   }
 }
 const MODEL_NAME = r => /flux-3/.test(r) ? 'FLUX 3' : /kontext|portrait/.test(r) ? 'FLUX Kontext' : /lora/.test(r) ? 'LTX-2 + LoRA' : /ltx/.test(r) ? 'LTX 2.5' : 'LTX-Video';
@@ -454,7 +456,7 @@ function drawIntroCard(dt) {
 }
 
 /* ---------- start / forge ---------- */
-$('#bSelfie').onclick = () => $('#fileIn').click();
+$('#bSelfie').onclick = () => { if (status && status.server && status.tier === 'none') { $('#keyBox').style.display = 'block'; $('#keyIn').focus(); return toast('Paste your Comfy key first (it stays in this browser), or play as a guest Crasher', 5000); } $('#fileIn').click(); };
 $('#bGuest').onclick = () => { personalSprites = null; window.resetHunterSprites && window.resetHunterSprites(); const rf = ROSTER.find(r => r.id === rosterPick) || ROSTER[0]; window.useRosterHunter && window.useRosterHunter(rf.id); hunterName = $('#nameIn').value.trim() || rf.name; portrait = rosterArt[rf.id] || guestPortrait || guestAvatar(); usedComfy = false; clipURL = null; trailer = null; beginIntro(); };
 // guest face: cropped from the default manhwa Crasher's full-body keyframe (falls back to a drawn avatar)
 let guestPortrait = null;

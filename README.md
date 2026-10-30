@@ -12,6 +12,7 @@
 
 <p align="center">
   <b><a href="https://luciddreamcenter1-design.github.io/gate-run/app/">▶ Play free</a></b> ·
+  <b><a href="https://gate-run.onrender.com/app/">Try the full pipeline with your own Comfy key</a></b> ·
   <a href="https://luciddreamcenter1-design.github.io/gate-run/">Project page</a> ·
   <a href="https://luciddreamcenter1-design.github.io/gate-run/media/launch.mp4">Watch the 21 s launch video</a> ·
   <a href="https://luciddreamcenter1-design.github.io/gate-run/media/demo.mp4">Demo: how it works (1:44)</a>
