@@ -55,6 +55,12 @@ input[type=text]{width:100%;background:#0c0a18;border:1px solid var(--line);colo
 .plateHunter{position:absolute;left:50%;bottom:12%;width:min(46vw,300px);aspect-ratio:1;border-radius:50%;object-fit:cover;border:3px solid var(--gate2);box-shadow:0 0 40px var(--gate2);transform:translateX(-50%);animation:plateIn 5s ease-in forwards}
 @keyframes plateIn{0%{opacity:0;transform:translateX(-50%) scale(.6)}15%{opacity:1;transform:translateX(-50%) scale(1)}70%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}100%{opacity:0;transform:translateX(-50%) translateY(-38vh) scale(.25)}}
 .directorCanvas{height:100%;max-width:100%;aspect-ratio:9/16;object-fit:contain;display:block}
+.arenas{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;margin-bottom:6px;scrollbar-width:none}
+.arena{flex:0 0 auto;width:86px;border:2px solid var(--line);border-radius:10px;background:#0c0a18;padding:0;overflow:hidden;cursor:pointer;color:var(--ink);font:600 10px "Chakra Petch";letter-spacing:.04em;text-align:center}
+.arena img{display:block;width:100%;height:48px;object-fit:cover}
+.arena span{display:block;padding:4px 2px}
+.arena.on{border-color:var(--gate2);box-shadow:0 0 14px rgba(56,214,255,.45)}
+.arena.up img{opacity:.85}
 #skip{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));width:auto;padding:10px 16px}
 .tbtn{position:fixed;border-radius:50%;border:2px solid var(--gate2);background:rgba(56,214,255,.12);color:var(--ink);font:700 14px "Chakra Petch";letter-spacing:.08em;z-index:6;display:none;touch-action:none}
 #atkBtn{right:20px;bottom:calc(22px + env(safe-area-inset-bottom));width:96px;height:96px;font-size:16px;background:rgba(56,214,255,.2)}
@@ -77,6 +83,9 @@ a{color:var(--gate2)}
     <p>Upload a selfie. ComfyUI turns you into a Gatecrasher, directs your own trailer, and drops you into an endless run of Gates.</p>
     <label class="field" for="nameIn">Crasher name</label>
     <input type="text" id="nameIn" maxlength="16" placeholder="Your name" autocomplete="off">
+    <label class="field" style="margin-top:12px">Arena</label>
+    <div class="arenas" id="arenaRow"></div>
+    <input type="file" id="arenaIn" accept="image/*" hidden>
     <input type="file" id="fileIn" accept="image/*" capture="user" hidden>
     <button class="btn" id="bSelfie">Take or upload a selfie</button>
     <button class="btn ghost" id="bGuest">Play as a guest Crasher</button>
@@ -319,6 +328,45 @@ function show(id) { document.querySelectorAll('.screen').forEach(s => s.classLis
 function toast(msg, ms = 3500) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', ms); }
 function gatePos() { return { x: W / 2, y: W < 560 ? Math.max(190, H * .27) : Math.max(130, H * .22) }; }
 function gateScale() { return clamp(Math.min(W, H) / 640, .7, 1.25); }
+
+/* ---------- arenas: presets, or the player's own place turned into a battleground (FLUX 3 + LTX-2 loop) ---------- */
+const ARENAS = [
+  { id: 'city', name: 'Neon Crossing', tint: '#404454' }, { id: 'temple', name: 'Sunken Temple', tint: '#35363d' },
+  { id: 'roof', name: 'Skyline Roof', tint: '#3a425b' }, { id: 'ice', name: 'Frozen Rift', tint: '#4c718a' },
+];
+let arena = null;
+function applyArena(a) { arena = a; window.pendingArena = a; if (window.setArena) window.setArena(a); try { localStorage.setItem('arena', a.id || 'city'); } catch (e) {} }
+function renderArenaRow(sel) {
+  const row = $('#arenaRow'); row.innerHTML = '';
+  for (const a of ARENAS) {
+    const b = document.createElement('button'); b.className = 'arena' + (a.id === sel ? ' on' : '');
+    b.innerHTML = `<img src="${a.thumb || 'arenas/' + a.id + '_thumb.jpg'}" alt=""><span>${a.name}</span>`;
+    b.onclick = () => { applyArena({ id: a.id, image: a.image || 'arenas/' + a.id + '.jpg', video: a.video || (a.custom ? null : 'arenas/' + a.id + '_loop.mp4'), tint: a.tint }); renderArenaRow(a.id); };
+    row.appendChild(b);
+  }
+  const up = document.createElement('button'); up.className = 'arena up';
+  up.innerHTML = `<img src="arenas/city_thumb.jpg" alt="" style="filter:grayscale(1) brightness(.5)"><span>+ YOUR PLACE</span>`;
+  up.onclick = () => $('#arenaIn').click(); row.appendChild(up);
+}
+$('#arenaIn').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const photo = await loadImg(URL.createObjectURL(f)), blob = await normalizedBlob(photo, 1400);
+  const mine = { id: 'mine', name: 'Your place', custom: true, tint: '#3a3550', thumb: URL.createObjectURL(blob), image: URL.createObjectURL(blob) };
+  const i = ARENAS.findIndex(a => a.id === 'mine'); if (i >= 0) ARENAS.splice(i, 1); ARENAS.unshift(mine);
+  applyArena({ id: 'mine', image: mine.image, tint: mine.tint }); renderArenaRow('mine');
+  if (!comfyOK) { toast('Preview mode: your photo is the arena. Run server.py to turn it into a manhwa battleground.'); return; }
+  try {
+    toast('Turning your place into a battleground · FLUX 3', 60000);
+    const a = await forgeJob('arena', blob); mine.image = mine.thumb = a.url;
+    applyArena({ id: 'mine', image: a.url, tint: mine.tint }); renderArenaRow('mine');
+    toast('Bringing it to life · LTX-2 (you can start playing)', 6000);
+    const v = await forgeJob('arenaloop', await (await fetch(a.url)).blob()); mine.video = v.url;
+    if (arena && arena.id === 'mine') applyArena({ id: 'mine', image: a.url, video: v.url, tint: mine.tint });
+    toast('Your arena is alive.', 2500);
+  } catch (err) { console.warn('arena', err); toast('Could not transform your place: ' + String(err.message || err).slice(0, 90)); }
+};
+{ const saved = (() => { try { return localStorage.getItem('arena'); } catch (e) { return null; } })(), a = ARENAS.find(x => x.id === saved) || ARENAS[0];
+  renderArenaRow(a.id); applyArena({ id: a.id, image: 'arenas/' + a.id + '.jpg', video: 'arenas/' + a.id + '_loop.mp4', tint: a.tint }); }
 
 /* ---------- start / forge ---------- */
 $('#bSelfie').onclick = () => $('#fileIn').click();

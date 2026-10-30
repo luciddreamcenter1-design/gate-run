@@ -1,0 +1,24 @@
+{
+  "_about": "Fighting arenas. Presets are generated once (FLUX 3 + an LTX-2 ambient loop) and ship in app/arenas/. 'upload' turns a player's own photo into an arena with FLUX 3, then LTX-2 animates it.",
+  "style": "semi-realistic Korean action webtoon (manhwa) art, sharp detailed rendering, glossy high-contrast lighting, deep shadows",
+  "upload": "Transform this photo into a battle arena for an anime action game. Keep the recognizable layout, landmarks, architecture and colors of this exact place so it is clearly the same location, but make it night, torn open by a jagged glowing violet and blue rift in the sky above it, glowing cracks in the ground, floating debris, rain, dramatic rim lighting. Wide establishing view with open, flat ground in the lower third of the frame where a fight can happen. No people. {style}.",
+  "motion": "Static locked-off camera, the view never moves. Ambient motion only: the rift in the sky slowly swirls and pulses with light, lightning flickers inside it, rain falls, small debris drifts upward, lights flicker. No people appear. Nothing else changes. {style}, smooth subtle motion. Audio: low rumbling hum, rain, distant thunder.",
+  "presets": {
+    "city": {
+      "name": "Neon Crossing",
+      "prompt": "A rain-soaked neon city intersection at night with glowing shop signs, wet asphalt reflecting violet light, overhead train tracks, a jagged violet-blue rift torn open in the sky above the buildings. Wide establishing view with open flat street in the lower third. No people. {style}."
+    },
+    "temple": {
+      "name": "Sunken Temple",
+      "prompt": "An ancient overgrown stone temple courtyard at night, broken pillars, roots and vines, stone lanterns with blue flames, a huge blood-red moon partly eclipsed by a jagged violet rift in the sky. Wide establishing view with open flat stone floor in the lower third. No people. {style}."
+    },
+    "roof": {
+      "name": "Skyline Roof",
+      "prompt": "A skyscraper rooftop helipad high above a sprawling city at dusk, wind, scattered rooftop equipment, glowing helipad markings, storm clouds swirling around a jagged violet-blue rift above the city. Wide establishing view with the open flat rooftop in the lower third. No people. {style}."
+    },
+    "ice": {
+      "name": "Frozen Rift",
+      "prompt": "A frozen canyon of glittering ice cliffs at night under shimmering aurora, icicles, cracked frozen lake floor glowing cyan from beneath, a jagged violet rift tearing the aurora apart. Wide establishing view with the open flat frozen floor in the lower third. No people. {style}."
+    }
+  }
+}

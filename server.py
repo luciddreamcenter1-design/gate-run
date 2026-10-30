@@ -55,6 +55,8 @@ ROUTES["keyframe"] = os.environ.get("KEYFRAME_ROUTES", "router:bfl/flux-3-image,
 ROUTES["voice"] = os.environ.get("VOICE_ROUTES", "router:elevenlabs/eleven_v3,router:elevenlabs/eleven_multilingual_v2")
 ROUTES["body"] = os.environ.get("BODY_ROUTES", "router:bfl/flux-3-image,router:bfl/flux-kontext-pro")
 ROUTES["move"] = os.environ.get("MOVE_ROUTES", "cloud:moves_ltx2_api.json,local:moves_ltx2_api.json")
+ROUTES["arena"] = os.environ.get("ARENA_ROUTES", "router:bfl/flux-3-image,router:bfl/flux-kontext-pro")
+ROUTES["arenaloop"] = os.environ.get("ARENALOOP_ROUTES", "cloud:arena_ltx2_api.json,local:arena_ltx2_api.json")
 ROUTES["upscale"] = os.environ.get("UPSCALE_ROUTES", "router:bfl/video-upscale-v1")
 ROUTES = {k: [r.strip() for r in v.split(",") if r.strip()] for k, v in ROUTES.items()}
 
@@ -74,6 +76,7 @@ PLATE_PROMPT = ("Empty rain-slick city street at night, vertical frame. In the c
 
 TRAILER = json.load(open(os.path.join(WF_DIR, "trailer.json")))
 MOVESET = json.load(open(os.path.join(WF_DIR, "moveset.json")))
+ARENAS = json.load(open(os.path.join(WF_DIR, "arenas.json")))
 JOBS, LOCK = {}, threading.Lock()
 
 
@@ -292,7 +295,7 @@ def note(job, text):
 
 
 def work(job, stage, img, opts):
-    image_title = "IN_SELFIE" if stage in ("portrait", "keyframe", "body") else "IN_IMAGE"
+    image_title = "IN_SELFIE" if stage in ("portrait", "keyframe", "body", "arena") else "IN_IMAGE"
     for route in ROUTES[stage]:
         kind, target = route.split(":", 1)
         job.update(route=route, plate=False)
@@ -380,6 +383,10 @@ class Handler(SimpleHTTPRequestHandler):
             stage = body["stage"]
             assert stage in ROUTES
             opts = {}
+            if stage == "arena":   # the player's own place -> battle arena (16:9)
+                opts.update(prompt=ARENAS["upload"].replace("{style}", ARENAS["style"]), aspect="16:9")
+            if stage == "arenaloop":
+                opts.update(prompt=ARENAS["motion"].replace("{style}", ARENAS["style"]))
             if stage in ("body", "move"):
                 ch = MOVESET["characters"][body["char"]]
                 if stage == "body":

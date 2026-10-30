@@ -45,10 +45,11 @@ if (renderer) {
 
   /* ---------- ground: grid, arena border, gate glow + ripples ---------- */
   const groundMat = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uGate: { value: new THREE.Vector2() }, uArena: { value: new THREE.Vector2(5, 10) }, uOpen: { value: 1 } },
+    transparent: true,
+    uniforms: { uTime: { value: 0 }, uGate: { value: new THREE.Vector2() }, uArena: { value: new THREE.Vector2(5, 10) }, uOpen: { value: 1 }, uTint: { value: new THREE.Color(0x221a4a) }, uBack: { value: 0 } },
     vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
     fragmentShader: `
-      varying vec3 vW; uniform float uTime, uOpen; uniform vec2 uGate, uArena;
+      varying vec3 vW; uniform float uTime, uOpen, uBack; uniform vec2 uGate, uArena; uniform vec3 uTint;
       float grid(vec2 p, float w){ vec2 g = abs(fract(p - .5) - .5) / fwidth(p); return 1. - min(min(g.x, g.y) / w, 1.); }
       void main(){
         vec2 p = vW.xz;
@@ -57,14 +58,15 @@ if (renderer) {
         vec2 q = abs(p) - uArena; float box = max(q.x, q.y);
         float inside = 1. - smoothstep(-.2, .2, box);
         float border = 1. - smoothstep(0., .07, abs(box));
-        vec3 col = vec3(.018, .014, .04);
-        col += vec3(.16, .11, .45) * grid(p, 1.2) * (.18 + .82 * glow) * (.3 + .7 * inside);
+        vec3 col = vec3(.018, .014, .04) + uTint * .06;
+        col += mix(vec3(.16, .11, .45), uTint * .9, .45) * grid(p, 1.2) * (.18 + .82 * glow) * (.3 + .7 * inside);
         col += vec3(.20, .15, .60) * grid(p / 4., 1.4) * .22;
         col += vec3(.30, .20, .95) * glow * .55;
         col += vec3(.35, .28, 1.2) * glow * .5 * smoothstep(.55, 1., sin(dg * 1.7 - uTime * 3.2));
         col += vec3(.5, 2.1, 2.8) * border * .55;
         float fade = exp(-length(p - cameraPosition.xz) * .03);
-        gl_FragColor = vec4(col * fade, 1.);
+        float keep = 1. - uBack * smoothstep(1.5, 9., box);   // with an arena backdrop, the floor ends a little past the arena
+        gl_FragColor = vec4(col * fade, keep);
       }`,
   });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), groundMat);
@@ -86,8 +88,32 @@ if (renderer) {
       m.compose(new THREE.Vector3(Math.cos(a) * r, h / 2, Math.sin(a) * r), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -a), new THREE.Vector3(w, h, w));
       city.setMatrixAt(i, m);
     }
-    scene.add(city);
+    scene.add(city); window.__city = city;
   }
+
+  /* ---------- arena backdrop: a FLUX/LTX-made place (image, then its living LTX loop), cover-fit behind everything ---------- */
+  let backTex = null, backVideo = null, backSize = [16, 9];
+  const fitBack = () => {
+    if (!backTex) return;
+    const ia = backSize[0] / backSize[1], sa = W / H;
+    backTex.repeat.set(sa < ia ? sa / ia : 1, sa < ia ? 1 : ia / sa);
+    backTex.offset.set((1 - backTex.repeat.x) / 2, (1 - backTex.repeat.y) * .35);
+  };
+  const useBack = (t, w, h) => {
+    t.colorSpace = THREE.SRGBColorSpace; backTex = t; backSize = [w, h]; fitBack();
+    scene.background = t; groundMat.uniforms.uBack.value = 1; if (window.__city) window.__city.visible = false;
+  };
+  addEventListener('resize', () => setTimeout(fitBack, 0));
+  window.setArena = ({ image, video, tint }) => {
+    if (tint) { groundMat.uniforms.uTint.value.set(tint); scene.fog.color.set(tint).multiplyScalar(.22); }
+    if (backVideo) { backVideo.pause(); backVideo.removeAttribute('src'); backVideo.load(); backVideo = null; }
+    if (image) new THREE.TextureLoader().load(image, t => { if (!backVideo || !(backTex instanceof THREE.VideoTexture)) useBack(t, t.image.width, t.image.height); });
+    if (video) {
+      const v = document.createElement('video'); v.src = video; v.muted = true; v.loop = true; v.playsInline = true; v.crossOrigin = 'anonymous'; v.preload = 'auto';
+      v.addEventListener('playing', () => { if (backVideo === v) useBack(new THREE.VideoTexture(v), v.videoWidth || 16, v.videoHeight || 9); }, { once: true });
+      v.play().catch(() => {}); backVideo = v;
+    }
+  };
 
   /* ---------- the Gate: swirl shader portal, rim, debris, inflow sparks ---------- */
   const gate = new THREE.Group(); scene.add(gate);
@@ -291,7 +317,7 @@ if (renderer) {
     } else if (play) {
       const px = wx(P.x), pz = wz(P.y);
       camT.set(px * .8, .9, pz * .8);
-      camP.set(camT.x, D * .6, camT.z + D * 1.02);         // HD-2D: low, close, characters read as standing figures
+      camP.set(camT.x, D * .5, camT.z + D * 1.05);         // HD-2D: low, close; the arena backdrop fills the top of the frame
     } else {   // menu / end: slow orbit around the Gate
       const a = Math.sin(T * .12) * .7;
       camT.set(gx, gy * .8, gz);
@@ -496,6 +522,7 @@ if (renderer) {
     return { x: (v3.x + 1) / 2 * W, y: (1 - v3.y) / 2 * H, behind: v3.z > 1 };
   }
 
+  if (window.pendingArena) window.setArena(window.pendingArena);   // arena picked before the renderer loaded
   window.R3 = { render, project, K };
   document.documentElement.classList.add('gl3d');
 }
