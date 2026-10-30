@@ -264,15 +264,22 @@ async function detectComfy() {
 }
 const MODEL_NAME = r => /flux-3/.test(r) ? 'FLUX 3' : /kontext|portrait/.test(r) ? 'FLUX Kontext' : /lora/.test(r) ? 'LTX-2 + LoRA' : /ltx/.test(r) ? 'LTX 2.5' : 'LTX-Video';
 function toDataURL(blob) { return new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); }
+const JOB_LIMIT = { portrait: 300, keyframe: 300, body: 300, voice: 120, clip: 600, move: 900, upscale: 300 };   // seconds before giving up on a stage
 async function forgeJob(stage, blob, onNote, extra = {}) {
   const r = await fetch('/api/forge', { method: 'POST', headers: { 'Content-Type': 'application/json', ...keyHeaders() }, body: JSON.stringify({ stage, image: blob ? await toDataURL(blob) : undefined, ...extra }) });
   const { job, error, detail } = await r.json();
   if (error === 'free_limit') { toast(detail, 6000); $('#keyBox').style.display = 'block'; }
   if (!job) throw new Error(detail || error || 'server refused job');
-  let lastRoute = null;
+  let lastRoute = null, misses = 0;
+  const deadline = Date.now() + (JOB_LIMIT[stage] || 600) * 1000;
   while (true) {
     await sleep(1500);
-    const j = await (await fetch('/api/jobs/' + job)).json();
+    if (Date.now() > deadline) throw new Error(stage + ' timed out (Comfy is busy)');
+    let r;   // ride out brief network blips; a 404 means the server restarted and the job is gone
+    try { r = await fetch('/api/jobs/' + job); } catch (e) { if (++misses > 8) throw e; continue; }
+    if (r.status === 404) throw new Error('the server restarted, so this job was lost');
+    if (!r.ok) { if (++misses > 8) throw new Error('job status ' + r.status); continue; }
+    misses = 0; const j = await r.json();
     if (j.route && j.route !== lastRoute && (j.tried || []).some(t => t.error && t.route === lastRoute)) toast('Route failed, switched to ' + ROUTE_LABEL(j.route));
     lastRoute = j.route || lastRoute;
     if (onNote) onNote(j);
@@ -505,14 +512,16 @@ async function forge(file) {
       const spec = await fetch('/workflows/trailer.json').then(r => r.json());
       if (status && status.tier === 'free') spec.shots = spec.shots.slice(0, 1);   // free tier: quick 1-shot trailer
       trailer = { spec, shots: spec.shots.map(() => null), narration: null, blob: null };
-      const n = spec.shots.length, count = () => trailer.shots.filter(Boolean).length;
-      const note = () => setStep(3, 'run', 'Directing your trailer · ' + count() + '/' + n + ' shots · LTX-2 + LoRA · keep playing');
+      const n = spec.shots.length, count = () => trailer.shots.filter(Boolean).length, t0 = Date.now();
+      let busy = false;
+      const note = () => setStep(3, 'run', 'Directing your trailer · ' + count() + '/' + n + ' shots · ' + (busy ? 'Comfy Cloud is busy, your shots are queued' : 'LTX-2 + LoRA') + ' · keep playing');
+      const watch = j => { const q = /queued|pending|in queue/i.test(j.note || '') && Date.now() - t0 > 45000; if (q !== busy) { busy = q; note(); } };
       note();
       forgeJob('voice', null, null, { name: hunterName }).then(v => { trailer.narration = v.url; }).catch(e => console.warn('narration', e));
       clipPromise = Promise.allSettled(spec.shots.map(async (sh, i) => {
         let src = hunterBlob;
         if (sh.keyframe) src = await (await fetch((await forgeJob('keyframe', hunterBlob, null, { shot: i })).url)).blob();
-        const c = await forgeJob('clip', src, null, { shot: i });
+        const c = await forgeJob('clip', src, watch, { shot: i });
         trailer.shots[i] = c; note();
         if (i === 0) { clipURL = c.url; clipIsVideo = /^video/.test(c.mime || ''); clipPlate = !!c.plate; routesUsed.clip = c.route; }
         // finishing pass: upscale to 1056x1920 (FLUX Video Upscale); saved trailer/Reel use it once it lands
@@ -520,7 +529,7 @@ async function forge(file) {
         if (status && status.tier === 'free') return;   // no upscale pass on the free tier
         fetch(c.url).then(r => r.blob()).then(b => forgeJob('upscale', b)).then(u => { if (trailer === mine) { mine.shots[i] = { ...c, url: u.url, upscaled: true }; mine.blob = null; } }).catch(e => console.warn('upscale skipped', e));
       })).then(() => {
-        if (!count()) return setStep(3, 'fail', 'Trailer skipped: no clip route worked');
+        if (!count()) return setStep(3, 'fail', 'Trailer skipped: Comfy did not return a clip in time');
         setStep(3, 'done', 'Your trailer is ready · ' + count() + ' shots · ' + ROUTE_LABEL(routesUsed.clip));
         if (mode === 'play') { sysMsg('[RIFT OS] Your trailer is ready.'); AK.vo('vo_clip_ready'); }
         if (mode === 'end') showEndButtons();
@@ -1235,7 +1244,7 @@ async function renderOnce(label, segments, narration) {
 function reelSegments() {
   const r = rankOf(), segs = [{ type: 'card', dur: 1.3, text: 'A GATE HAS OPENED', sub: '[ RIFT OS ]', sfx: 'riser' }];
   const sh = trailer.shots, spec = trailer.spec.shots;
-  if (sh[0]) segs.push({ type: 'video', src: sh[0].url, use: [0, 4.2], card: 'CRASHER ' + hunterName.toUpperCase(), sfx: 'gate_open' });
+  if (sh[0]) segs.push({ type: 'video', src: sh[0].url, use: [0, 4.0], card: 'CRASHER ' + hunterName.toUpperCase(), sfx: 'gate_open' });
   if (sh[1]) segs.push({ type: 'video', src: sh[1].url, use: [0.4, 3.2], flash: true, sfx: 'braam' });
   if (GameRec.url) segs.push({ type: 'video', src: GameRec.url, use: [0, Math.min(GameRec.dur || 7, 9)], flash: true, vol: 1, card: GameRec.tag === 'boss' ? 'BREACH LORD' : 'THE RUN' });
   if (sh[2]) segs.push({ type: 'video', src: sh[2].url, use: [0.4, 3.2], flash: true, sfx: 'whoosh' });
