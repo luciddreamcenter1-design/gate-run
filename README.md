@@ -2,6 +2,8 @@
 
 **Take a selfie. Become a Gatecrasher. Watch a Gate tear open behind you. Then play as yourself.**
 
+**▶ Play the preview:** https://luciddreamcenter1-design.github.io/gate-run/ (guest mode with the shipped cast; run `server.py` with a Comfy key to play as yourself)
+
 An open-source rebuild of the "put yourself in the shot" apps, made for Comfy's **#OpenSourceHiggsfield** contest.
 
 | Selfie | Crasher (FLUX 3) | Gate clip (LTX-2 + LoRA) | Play (3D) | Crasher Pass |
