@@ -1,0 +1,22 @@
+# One-click hosting: https://render.com/deploy?repo=https://github.com/luciddreamcenter1-design/gate-run
+# Render asks for COMFY_API_KEY during setup (it is never committed). Visitors get a free tier on that key;
+# anyone can paste their own key in the app for the full trailer and no limits.
+services:
+  - type: web
+    name: gate-run
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 server.py
+    healthCheckPath: /app/
+    envVars:
+      - key: COMFY_API_KEY
+        sync: false
+      - key: FREE_LIMITS
+        value: "1"
+      - key: FREE_JOBS_PER_IP
+        value: "14"
+      - key: FREE_JOBS_PER_DAY
+        value: "600"
+      - key: PYTHON_VERSION
+        value: "3.12.7"

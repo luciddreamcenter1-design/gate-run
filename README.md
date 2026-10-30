@@ -34,6 +34,19 @@ Open **http://localhost:8080**. The badge on the start screen shows which Comfy 
 
 No key and no ComfyUI? The game still runs in **preview mode** (in-browser toon filter, built-in Gate), so anyone can play from a link. Open `app/index.html` from any static host.
 
+## Put it online (full version, about 5 minutes)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/luciddreamcenter1-design/gate-run)
+
+1. Click the button, sign in to Render, and paste your `COMFY_API_KEY` when it asks. The key stays in Render's settings and is never in the repo.
+2. Render builds from `render.yaml` and gives you an `https://…onrender.com` link that works on phones (camera upload, share sheet).
+
+How credits work on a public link:
+- **Free tier on your key:** each visitor gets `FREE_JOBS_PER_IP` generation steps per day (default 14, about one Crasher with a quick 1-shot trailer and their own animated moveset). There's also a global daily cap, `FREE_JOBS_PER_DAY` (default 600). You can change both in Render.
+- **Their own key:** visitors can tap "Use my own Comfy key". The key is stored only in their browser, sent with their own requests, and used for their jobs only. It's never logged or stored on the server. That unlocks the full 3-shot trailer and removes the limits.
+
+The free GitHub Pages link above stays up too, as the no-key guest version.
+
 ## How generation is routed
 
 `server.py` takes each job (portrait or clip) down a route list and uses the first one that works. If a route fails (out of credits, provider down, missing model), it moves on to the next one. Comfy Router also switches serving providers on its own.

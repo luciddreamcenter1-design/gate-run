@@ -43,6 +43,11 @@ KEY = os.environ.get("COMFY_API_KEY", "").strip()
 COMFY_URL = os.environ.get("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
 ROUTER = os.environ.get("COMFY_ROUTER_URL", "https://api.comfy.org").rstrip("/")
 PORT = int(os.environ.get("PORT", "8080"))
+# Free tier on the host key (hosted deploys set FREE_LIMITS=1). Visitors with their own key are not limited.
+FREE_LIMITS = os.environ.get("FREE_LIMITS", "") == "1"
+FREE_JOBS_PER_IP = int(os.environ.get("FREE_JOBS_PER_IP", "14"))    # about one Crasher: portrait, quick trailer, voice, body, 5 moves
+FREE_JOBS_PER_DAY = int(os.environ.get("FREE_JOBS_PER_DAY", "600"))
+USAGE = {}
 
 ROUTES = {
     "portrait": os.environ.get("PORTRAIT_ROUTES",
@@ -175,23 +180,24 @@ def router_body(model, img_b64, opts):
 
 
 def run_router(job, model, img, opts):
-    if not KEY:
+    key = opts.get("key") or KEY
+    if not key:
         raise Skip("no COMFY_API_KEY")
     body, plate = router_body(model, base64.b64encode(img).decode(), opts)
     job["plate"] = plate
     sync = model.startswith("elevenlabs/")  # Router serves these on the synchronous route only
     if comfy_sdk and sync:
         note(job, f"Comfy Router · {model} · running")
-        with comfy_sdk.Comfy(api_key=KEY) as c:
+        with comfy_sdk.Comfy(api_key=key) as c:
             result = c.models.run(model, body)
         if isinstance(result, comfy_sdk.BinaryResult):
             return result.content
     elif sync:
         note(job, f"Comfy Router · {model} · running")
         return http(f"{ROUTER}/v2/models/{model}", json.dumps(body).encode(),
-                    {"X-API-Key": KEY, "Content-Type": "application/json", "Idempotency-Key": str(uuid.uuid4())}, timeout=180)[2]
+                    {"X-API-Key": key, "Content-Type": "application/json", "Idempotency-Key": str(uuid.uuid4())}, timeout=180)[2]
     elif comfy_sdk:  # SDK: queued submit, poll with server-named Retry-After, typed errors
-        with comfy_sdk.Comfy(api_key=KEY) as c:
+        with comfy_sdk.Comfy(api_key=key) as c:
             h = c.models.submit(model, body)
             for u in h.iter_events():
                 note(job, f"Comfy Router · {model} · {u.status.lower().replace('_', ' ')}"
@@ -200,7 +206,7 @@ def run_router(job, model, img, opts):
         if isinstance(result, comfy_sdk.BinaryResult):
             return result.content
     else:  # plain HTTP, same queue routes
-        base, hdr = f"{ROUTER}/v2/models/{model}/requests", {"X-API-Key": KEY}
+        base, hdr = f"{ROUTER}/v2/models/{model}/requests", {"X-API-Key": key}
         _, _, sub = http_json(base, body, {**hdr, "Idempotency-Key": str(uuid.uuid4())})
         rid = sub["request_id"]
         while True:
@@ -221,11 +227,12 @@ def run_router(job, model, img, opts):
 
 
 def run_cloud(job, name, img, image_title, opts):
-    if not KEY:
+    key = opts.get("key") or KEY
+    if not key:
         raise Skip("no COMFY_API_KEY")
     if not comfy_sdk:
         raise Skip("pip install comfy-sdk")
-    with comfy_sdk.Comfy(api_key=KEY) as c:
+    with comfy_sdk.Comfy(api_key=key) as c:
         graph, img_id, out_id = load_wf(name, image_title, "placeholder.png", random.randrange(2**32), opts.get("prompt"), opts.get("frames"))
         wf = c.workflows.from_json(graph)
         wf.set_input(img_id, "image", c.assets.from_bytes(img, filename="gaterun.png", content_type="image/png"))
@@ -246,6 +253,7 @@ def run_cloud(job, name, img, image_title, opts):
 
 
 def run_local(job, name, img, image_title, opts):
+    key = opts.get("key") or KEY
     if not local_up():
         raise Skip(f"no ComfyUI at {COMFY_URL}")
     bnd = uuid.uuid4().hex
@@ -256,8 +264,8 @@ def run_local(job, name, img, image_title, opts):
     up = json.loads(http(COMFY_URL + "/upload/image", form, {"Content-Type": f"multipart/form-data; boundary={bnd}"})[2])
     wf, _, out_id = load_wf(name, image_title, up["name"], random.randrange(2**32), opts.get("prompt"), opts.get("frames"))
     body = {"prompt": wf, "client_id": "gaterun"}
-    if KEY:  # lets partner nodes (LTX 2.5 API, FLUX API) bill your Comfy account
-        body["extra_data"] = {"api_key_comfy_org": KEY}
+    if key:  # lets partner nodes (LTX 2.5 API, FLUX API) bill your Comfy account
+        body["extra_data"] = {"api_key_comfy_org": key}
     try:
         _, _, q = http_json(COMFY_URL + "/prompt", body)
     except urllib.error.HTTPError as e:
@@ -283,10 +291,11 @@ def run_local(job, name, img, image_title, opts):
     raise RuntimeError(f"{name} timed out")
 
 
-def route_ready(route):
+def route_ready(route, key=None):
     kind = route.split(":", 1)[0]
-    if kind == "router": return bool(KEY)
-    if kind == "cloud": return bool(KEY and comfy_sdk)
+    key = key or KEY
+    if kind == "router": return bool(key)
+    if kind == "cloud": return bool(key and comfy_sdk)
     return local_up()
 
 
@@ -344,13 +353,26 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def visitor_key(self):
+        k = (self.headers.get("X-Comfy-Key") or "").strip()
+        return k if k.startswith("comfyui-") and len(k) < 200 else None
+
+    def client_ip(self):
+        return (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
+
+    def free_left(self):
+        day = time.strftime("%Y-%m-%d")
+        return (max(0, FREE_JOBS_PER_IP - USAGE.get((day, self.client_ip()), 0)), max(0, FREE_JOBS_PER_DAY - USAGE.get(day, 0)))
+
     def do_GET(self):
         path = self.path.split("?")[0]
         if path == "/api/status":
+            vk = self.visitor_key()
+            tier = "own" if vk else ("free" if FREE_LIMITS and KEY else ("host" if KEY else "none"))
             return self.send_json({
-                "server": True, "key": bool(KEY), "sdk": getattr(comfy_sdk, "__version__", None) if comfy_sdk else None,
-                "local": local_up(),
-                "routes": {s: [{"route": r, "ready": route_ready(r)} for r in rs] for s, rs in ROUTES.items()},
+                "server": True, "key": bool(KEY or vk), "sdk": getattr(comfy_sdk, "__version__", None) if comfy_sdk else None,
+                "local": local_up(), "tier": tier, "free_left": min(self.free_left()) if tier == "free" else None,
+                "routes": {s: [{"route": r, "ready": route_ready(r, vk)} for r in rs] for s, rs in ROUTES.items()},
             })
         m = re.fullmatch(r"/api/(jobs|media)/([\w-]+)", path)
         if m:
@@ -409,6 +431,14 @@ class Handler(SimpleHTTPRequestHandler):
                 assert opts["prompt"] or stage == "clip"
         except Exception:
             return self.send_json({"error": "send {stage, image: dataURL, shot?, name?}"}, 400)
+        vk = self.visitor_key()
+        if vk:
+            opts["key"] = vk          # used for this job only, never logged or stored
+        elif FREE_LIMITS and KEY:
+            per_ip, per_day = self.free_left()
+            if per_ip <= 0 or per_day <= 0:
+                return self.send_json({"error": "free_limit", "detail": "Free tries are used up for today. Add your own Comfy key to keep going."}, 429)
+            day = time.strftime("%Y-%m-%d"); USAGE[(day, self.client_ip())] = USAGE.get((day, self.client_ip()), 0) + 1; USAGE[day] = USAGE.get(day, 0) + 1
         gc()
         jid = uuid.uuid4().hex
         JOBS[jid] = {"t": time.time(), "status": "running", "route": None, "note": "queued", "tried": [], "plate": False}
