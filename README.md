@@ -1,23 +1,48 @@
 # Gate Run
 
-**Take a selfie. Become a Gatecrasher. Get your own anime trailer. Then the Gates open, each harder than the last. How many can you crash?**
+### One selfie. Your own anime trailer. A fighter you play. How many Gates can you crash?
 
-**▶ Play the preview:** https://luciddreamcenter1-design.github.io/gate-run/ (works on phone, iPad and desktop; Add to Home Screen for fullscreen. Guest mode uses the shipped cast; run `server.py` with a Comfy key to play as yourself)
+<p align="center">
+  <a href="https://luciddreamcenter1-design.github.io/gate-run/media/launch.mp4"><img src="media/launch.jpg" width="300" alt="Gate Run launch video: click to watch (21 s)"></a>
+  &nbsp;
+  <img src="media/combat.jpg" width="300" alt="Gameplay: a 23-hit combo">
+  &nbsp;
+  <img src="media/versus.jpg" width="300" alt="Online 1v1: Ren vs Kira">
+</p>
 
-An open-source rebuild of the "put yourself in the shot" apps, made for Comfy's **#OpenSourceHiggsfield** contest.
+<p align="center">
+  <b><a href="https://luciddreamcenter1-design.github.io/gate-run/app/">▶ Play free</a></b> ·
+  <a href="https://luciddreamcenter1-design.github.io/gate-run/">Project page</a> ·
+  <a href="https://luciddreamcenter1-design.github.io/gate-run/media/launch.mp4">Watch the 21 s launch video</a>
+</p>
 
-| Selfie | Crasher (FLUX 3) | Gate clip (LTX-2 + LoRA) | Play (3D) | Crasher Pass |
+Built for Comfy's **#OpenSourceHiggsfield** contest. It's an open-source answer to the paid "put yourself in the shot" apps, and it goes further: you don't only get a clip of yourself, you get to *play* as yourself.
+
+## The idea
+
+Filmmakers make one film. Gate Run makes one for every player.
+
+You take a selfie. A minute later you're a manhwa-style Gatecrasher with a three-shot anime trailer where a narrator says your name. Then a Gate tears open and you fight through it, as you: the full-body character on screen, every swing, dash and special, was animated by LTX-2 from your picture. The Gates keep coming, each harder than the last, with a Breach Lord every fifth one. When you fall, you get a Crasher Pass card and a one-tap vertical Reel of your trailer and your run, ready to post. Then you send a friend a link and settle it 1v1.
+
+No selfie, no credits, no problem: four original Crashers (Ren, Kira, Brann and Vex) ship with full LTX-animated movesets and voiced lines, so anyone can play from the link for free, on a phone, iPad or desktop.
+
+## What's in it
+
+| | |
+|---|---|
+| **Selfie to Crasher** | FLUX 3 on Comfy Router redraws you as a semi-realistic manhwa hero who still looks like you. |
+| **Your anime trailer** | FLUX 3 keyframes, then **LTX-2 image-to-video + camera LoRA** (a ComfyUI workflow on Comfy Cloud) animates three shots with sound. An ElevenLabs narrator says your name and FLUX Video Upscale finishes it at 1056×1920. The browser edits it with title cards, grade, grain and letterbox. |
+| **Play as yourself** | FLUX 3 draws your full body on green and LTX-2 animates five moves. The browser keys the green, trims the frames and bakes sprite sheets. It takes about 3.5 minutes from selfie to playable you. |
+| **Real combat** | 3-hit combos with aim assist, dash i-frames, a special meter, hit-stop, juggles, enemy telegraphs, weapon drops, and boss entrance cinematics. Runs at 60 fps on phones. |
+| **Online 1v1** | Send a link and fight live, peer-to-peer over WebRTC with no game server. VS splash, K.O. cinematic, and a shareable victory card. |
+| **Arenas** | Four living arenas (FLUX 3 paintings animated by LTX-2), or upload a photo of your place and ComfyUI turns it into a battleground. |
+| **Made to share** | Crasher Pass card, a one-tap 1080×1920 Reel, a victory card, and the dare in every caption: *How many Gates can you crash?* |
+
+| Selfie | Crasher (FLUX 3) | Trailer shot (LTX-2 + LoRA) | Boss Gate | Crasher Pass |
 |---|---|---|---|---|
-| ![](demo/selfie_fictional.png) | ![](demo/hunter.png) | [demo/gate_clip.mp4](demo/gate_clip.mp4) | ![](demo/gameplay_3d.png) | ![](demo/crasher_pass.png) |
+| ![](demo/selfie_fictional.png) | ![](demo/hunter.png) | [media/trailer_shot.mp4](media/trailer_shot.mp4) | ![](media/boss.jpg) | ![](demo/crasher_pass.png) |
 
-*Demo face is AI-generated (fictional person).*
-
-1. **FLUX 3 image edit** (via Comfy Router) turns your selfie into a Gatecrasher who still looks like you.
-2. **A personalized 3-shot trailer** renders while you play. FLUX 3 makes keyframes from your Crasher, and **LTX-2 image-to-video + camera LoRA** (a ComfyUI workflow on Comfy Cloud) animates each shot with sound. An ElevenLabs narrator says your name, and FLUX Video Upscale finishes the shots at 1056×1920. The page cuts it together with title cards, grade, grain and letterbox.
-3. A 75-second **HD-2D action game**. Your Crasher is a full-body, semi-realistic manhwa-style character animated by LTX-2: FLUX 3 draws your body on green, LTX-2 animates idle, run, a 3-hit katana combo, dash and a special, and the browser keys and bakes them into sprite sheets. Real combat: manual combos with aim assist, dash with invincibility frames, a special-meter ultimate, enemies that telegraph and lunge, juggles, hit-stop, and a combo counter. Enemies and the boss are LTX-animated too. It has a boss entrance cinematic (letterbox, slow motion, camera swoop), hit-stop, and a full ElevenLabs sound kit with a "[RIFT OS]" narrator.
-4. **Free roster + online 1v1.** Pick Ren, Kira, Brann or Vex, four original Crashers whose full-body movesets were animated by LTX-2 and ship with the game, so anyone can play free. Each has a voiced catchphrase on a fighting-game intro card. **⚔ 1v1 a friend online**: send a link, and you fight live, peer-to-peer in the browser (no game server), with a VS splash, a K.O. cinematic, and a shareable victory card.
-5. **Arenas:** four living arenas (FLUX 3 art + LTX-2 ambient loops), or **upload a photo of your own place** and ComfyUI turns it into a rift-torn battleground.
-6. **One-tap Reel:** a vertical 1080×1920 MP4 of your trailer, your actual gameplay and your Crasher Pass card, ready for TikTok/Reels. You can also save the trailer and the license card on their own.
+*The demo face is AI-generated (a fictional person).*
 
 Full spec: [SPEC.md](SPEC.md) · Demo video script: [DEMO_SCRIPT.md](DEMO_SCRIPT.md)
 
