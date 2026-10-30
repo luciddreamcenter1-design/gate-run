@@ -708,6 +708,12 @@ cv.addEventListener('contextmenu', e => e.preventDefault());
 $('#dashBtn').addEventListener('pointerdown', e => { e.stopPropagation(); tryDash(); });
 $('#atkBtn').addEventListener('pointerdown', e => { e.stopPropagation(); tryAttack(); });
 $('#spBtn').addEventListener('pointerdown', e => { e.stopPropagation(); trySpecial(); });
+// iOS Safari ignores user-scalable=no: one thumb moving + one on ATK reads as a pinch, and fast taps as a double-tap zoom.
+// Block both; the controls use pointer events, which still fire.
+['gesturestart', 'gesturechange'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+[cv, ...document.querySelectorAll('.tbtn')].forEach(el => el.addEventListener('touchstart', e => e.preventDefault(), { passive: false }));
+{ let lastTap = 0; document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTap < 350 && !e.target.closest('input, textarea')) e.preventDefault(); lastTap = t; }, { passive: false }); }
 
 /* ---------- combat ---------- */
 const ANIM = (o, name, t, p) => { o.name = name; o.t = t; o.p = p; return o; };   // mutate in place: no per-frame allocation
