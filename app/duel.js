@@ -185,7 +185,7 @@ const Duel = (() => {
       for (const [k, a] of Object.entries(d.sprites.anims)) { const img = await loadImg(a.img); const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0); anims[k] = { canvas: c, cols: a.cols, rows: a.rows, n: a.n, loop: a.loop }; }
       window.setRivalSprites({ anchor: d.sprites.anchor, anims });
     } else if (window.setRivalSprites) { window.setRivalSprites(null); window.setRivalRoster && window.setRivalRoster(d.roster); }
-    if (d.arena) { const pre = ARENAS.find(a => a.id === d.arena.id && !a.custom); applyArena(pre ? { id: pre.id, image: 'arenas/' + pre.id + '.jpg', video: 'arenas/' + pre.id + '_loop.mp4', tint: pre.tint } : { id: 'rival', image: d.arena.image, tint: d.arena.tint }); }
+    if (d.arena) { const pre = ARENAS.find(a => a.id === d.arena.id && !a.custom); applyArena(pre ? { id: pre.id, image: 'arenas/' + pre.id + '.jpg', video: 'arenas/' + pre.id + '_loop.mp4', ground: 'arenas/' + pre.id + '_ground.jpg', tint: pre.tint } : { id: 'rival', image: d.arena.image, tint: d.arena.tint }); }
     if (role === 'host') begin();
   }
   function wire(c) {

@@ -43,13 +43,20 @@ if (renderer) {
   const gateLight = new THREE.PointLight(VIOLET, 28, 26, 1.6); scene.add(gateLight);
   const heroLight = new THREE.PointLight(CYAN, 5, 6, 2); scene.add(heroLight);
 
-  /* ---------- ground: stone flagstones, arena border, gate glow + ripples ---------- */
+  /* ---------- arena room: the arena painting (or its LTX loop) projected from its own viewpoint onto a real floor + walls
+     ("tour into the picture"): its ground lands on the floor, its buildings on the walls, so fighters stand inside the place ---------- */
+  const room = { uMap: { value: null }, uProj: { value: new THREE.Vector4(20, 2, 1, 1) }, uVH: { value: .47 } };
+  const PROJ = `uniform sampler2D uMap; uniform vec4 uProj; uniform float uVH;
+      vec2 projUV(vec3 w){ vec3 d = w - vec3(0., uProj.y, uProj.x); float dz = max(.05, -d.z); return vec2(.5 + d.x / dz * uProj.z, uVH + d.y / dz * uProj.w); }`;
+
+  /* ---------- ground: arena floor (projected) or stone flagstones, gate glow + ripples ---------- */
   const groundMat = new THREE.ShaderMaterial({
     transparent: true,
-    uniforms: { uTime: { value: 0 }, uGate: { value: new THREE.Vector2() }, uArena: { value: new THREE.Vector2(5, 10) }, uOpen: { value: 1 }, uTint: { value: new THREE.Color(0x221a4a) }, uBack: { value: 0 } },
+    uniforms: { uTime: { value: 0 }, uGate: { value: new THREE.Vector2() }, uArena: { value: new THREE.Vector2(5, 10) }, uOpen: { value: 1 }, uTint: { value: new THREE.Color(0x221a4a) }, uBack: { value: 0 }, uGround: { value: null }, uHasGround: { value: 0 }, ...room },
     vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
     fragmentShader: `
-      varying vec3 vW; uniform float uTime, uOpen, uBack; uniform vec2 uGate, uArena; uniform vec3 uTint;
+      varying vec3 vW; uniform float uTime, uOpen, uBack, uHasGround; uniform vec2 uGate, uArena; uniform vec3 uTint; uniform sampler2D uGround;
+      ${PROJ}
       float h1(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
         return mix(mix(h1(i), h1(i + vec2(1, 0)), f.x), mix(h1(i + vec2(0, 1)), h1(i + 1.), f.x), f.y); }
@@ -69,16 +76,52 @@ if (renderer) {
         vec3 stone = (vec3(.05, .045, .07) + uTint * .42) * tone * wear * (.85 + .3 * smoothstep(0., .25, edge));   // slab edges a little darker
         vec3 col = mix(vec3(.01, .008, .02), stone, slab) * (.55 + .45 * inside);
         col += vec3(.45, .3, 1.4) * (1. - slab) * pow(glow, 3.) * 1.6;   // rift light seeps up through the gaps near the Gate
+        if (uBack > .5) {   // the arena's own top-down ground texture (stone slabs if it has none), flowing into the projected painting at the back wall
+          vec3 near = col;
+          if (uHasGround > .5) {   // two rotated samples blended by noise so the tile never visibly repeats
+            vec3 g1 = texture2D(uGround, p / 5.).rgb, g2 = texture2D(uGround, mat2(.8, -.6, .6, .8) * p / 6.3 + .37).rgb;
+            near = pow(mix(g1, g2, smoothstep(.3, .7, n2(p * .18))), vec3(2.2)) * .85;
+          }
+          vec3 far = pow(texture2D(uMap, clamp(projUV(vW), .002, .998)).rgb, vec3(2.2)) * .9;
+          col = mix(near, far, smoothstep(-uArena.y + 2.5, -uArena.y + .3, p.y)) * (1. - .6 * smoothstep(0., .3, box));
+        }
         col += vec3(.30, .20, .95) * glow * .55;
         col += vec3(.35, .28, 1.2) * glow * .5 * smoothstep(.55, 1., sin(dg * 1.7 - uTime * 3.2));
-        col += vec3(.5, 2.1, 2.8) * border * .55;
+        col += vec3(.5, 2.1, 2.8) * border * .55 * (1. - uBack);   // the walls are the border once an arena is up
         float fade = exp(-length(p - cameraPosition.xz) * .022);
-        float keep = 1. - uBack * smoothstep(1.5, 9., box);   // with an arena backdrop, the floor ends a little past the arena
-        gl_FragColor = vec4(col * fade, keep);
+        gl_FragColor = vec4(col * fade, 1.);
       }`,
   });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), groundMat);
   ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+  // back + side walls at the arena's edges; above the painting's top edge they open to the night
+  const wallMat = new THREE.ShaderMaterial({
+    side: THREE.DoubleSide,
+    uniforms: { uGate: groundMat.uniforms.uGate, uOpen: groundMat.uniforms.uOpen, ...room },
+    vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `
+      varying vec3 vW; uniform vec2 uGate; uniform float uOpen;
+      ${PROJ}
+      void main(){
+        vec2 uv = projUV(vW); if (uv.y > 1.) discard;
+        vec3 col = pow(texture2D(uMap, clamp(uv, .002, .998)).rgb, vec3(2.2)) * .95;
+        col *= .55 + .45 * smoothstep(0., .8, vW.y);   // contact shadow where wall meets floor
+        col += vec3(.30, .20, .95) * exp(-length((vW.xz - uGate) * vec2(1., 1.3)) * .3) * uOpen * .35;
+        gl_FragColor = vec4(col * exp(-length(vW.xz - cameraPosition.xz) * .022), 1.);
+      }`,
+  });
+  const walls = [0, 1, 2].map(() => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), wallMat); m.visible = false; scene.add(m); return m; });
+  walls[1].rotation.y = Math.PI / 2; walls[2].rotation.y = -Math.PI / 2;
+  let roomKey = '';
+  function fitRoom() {   // size the room to the arena and aim the projector so the painting's floor fills it
+    const key = W + 'x' + H; if (key === roomKey) return; roomKey = key;
+    const X = W / 2 / K + .5, Z = H / 2 / K + .5, vH = room.uVH.value, vJ = .22, h = 2;   // vJ: where the painted floor meets its back wall
+    const zp = Z * (2 * vH - vJ) / vJ, fv = vH * (zp - Z) / h, fu = .5 * (zp - Z) / X, Hw = h + (1 - vH) * (zp + Z) / fv;
+    room.uProj.value.set(zp, h, fu, fv);
+    walls[0].scale.set(2 * X, Hw, 1); walls[0].position.set(0, Hw / 2, -Z);
+    for (const [i, sx] of [[1, -X], [2, X]]) { walls[i].scale.set(2 * Z, Hw, 1); walls[i].position.set(sx, Hw / 2, 0); }
+  }
 
   /* ---------- night city skyline (instanced, emissive windows) ---------- */
   {
@@ -100,25 +143,20 @@ if (renderer) {
   }
 
   /* ---------- arena backdrop: a FLUX/LTX-made place (image, then its living LTX loop), cover-fit behind everything ---------- */
-  let backTex = null, backVideo = null, backSize = [16, 9];
-  const fitBack = () => {
-    if (!backTex) return;
-    const ia = backSize[0] / backSize[1], sa = W / H;
-    backTex.repeat.set(sa < ia ? sa / ia : 1, sa < ia ? 1 : ia / sa);
-    backTex.offset.set((1 - backTex.repeat.x) / 2, (1 - backTex.repeat.y) * .35);
+  let backTex = null, backVideo = null;
+  const useBack = t => {
+    t.colorSpace = THREE.SRGBColorSpace; backTex = t; room.uMap.value = t;
+    groundMat.uniforms.uBack.value = 1; for (const w of walls) w.visible = true; if (window.__city) window.__city.visible = false;
   };
-  const useBack = (t, w, h) => {
-    t.colorSpace = THREE.SRGBColorSpace; backTex = t; backSize = [w, h]; fitBack();
-    scene.background = t; groundMat.uniforms.uBack.value = 1; if (window.__city) window.__city.visible = false;
-  };
-  addEventListener('resize', () => setTimeout(fitBack, 0));
-  window.setArena = ({ image, video, tint }) => {
-    if (tint) { groundMat.uniforms.uTint.value.set(tint); scene.fog.color.set(tint).multiplyScalar(.22); }
+  window.setArena = ({ image, video, tint, ground }) => {
+    const gu = groundMat.uniforms; gu.uHasGround.value = 0;
+    if (ground) new THREE.TextureLoader().load(ground, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; gu.uGround.value = t; gu.uHasGround.value = 1; });
+    if (tint) { groundMat.uniforms.uTint.value.set(tint); scene.fog.color.set(tint).multiplyScalar(.22); scene.background.copy(scene.fog.color); }
     if (backVideo) { backVideo.pause(); backVideo.removeAttribute('src'); backVideo.load(); backVideo = null; }
-    if (image) new THREE.TextureLoader().load(image, t => { if (!backVideo || !(backTex instanceof THREE.VideoTexture)) useBack(t, t.image.width, t.image.height); });
+    if (image) new THREE.TextureLoader().load(image, t => { if (!backVideo || !(backTex instanceof THREE.VideoTexture)) useBack(t); });
     if (video) {
       const v = document.createElement('video'); v.src = video; v.muted = true; v.loop = true; v.playsInline = true; v.crossOrigin = 'anonymous'; v.preload = 'auto';
-      v.addEventListener('playing', () => { if (backVideo === v) useBack(new THREE.VideoTexture(v), v.videoWidth || 16, v.videoHeight || 9); }, { once: true });
+      v.addEventListener('playing', () => { if (backVideo === v) useBack(new THREE.VideoTexture(v)); }, { once: true });
       v.play().catch(() => {}); backVideo = v;
     }
   };
@@ -366,7 +404,7 @@ if (renderer) {
     portal.scale.set(rx, ry, 1); rim.scale.set(rx, ry, 1);
     portalMat.uniforms.uTime.value = T; portalMat.uniforms.uOpen.value = open * (menu ? 1 : .7);
     groundMat.uniforms.uTime.value = T; groundMat.uniforms.uOpen.value = open;
-    groundMat.uniforms.uGate.value.set(gx, gz); groundMat.uniforms.uArena.value.set(W / 2 / K, H / 2 / K);
+    groundMat.uniforms.uGate.value.set(gx, gz); groundMat.uniforms.uArena.value.set(W / 2 / K, H / 2 / K); fitRoom();
     gateLight.position.set(gx, gy, gz + 1.5); gateLight.intensity = 28 * open;
     for (const d of debris) {
       const u = d.userData, a = u.a + T * u.s * .5;

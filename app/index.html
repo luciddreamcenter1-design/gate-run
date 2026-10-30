@@ -394,7 +394,7 @@ function renderArenaRow(sel) {
   for (const a of ARENAS) {
     const b = document.createElement('button'); b.className = 'arena' + (a.id === sel ? ' on' : '');
     b.innerHTML = `<img src="${a.thumb || 'arenas/' + a.id + '_thumb.jpg'}" alt=""><span>${a.name}</span>`;
-    b.onclick = () => { applyArena({ id: a.id, image: a.image || 'arenas/' + a.id + '.jpg', video: a.video || (a.custom ? null : 'arenas/' + a.id + '_loop.mp4'), tint: a.tint }); renderArenaRow(a.id); };
+    b.onclick = () => { applyArena({ id: a.id, image: a.image || 'arenas/' + a.id + '.jpg', video: a.video || (a.custom ? null : 'arenas/' + a.id + '_loop.mp4'), ground: a.custom ? null : 'arenas/' + a.id + '_ground.jpg', tint: a.tint }); renderArenaRow(a.id); };
     row.appendChild(b);
   }
   const up = document.createElement('button'); up.className = 'arena up';
@@ -420,7 +420,7 @@ $('#arenaIn').onchange = async e => {
   } catch (err) { console.warn('arena', err); toast('Could not transform your place: ' + String(err.message || err).slice(0, 90)); }
 };
 { const saved = (() => { try { return localStorage.getItem('arena'); } catch (e) { return null; } })(), a = ARENAS.find(x => x.id === saved) || ARENAS[0];
-  renderArenaRow(a.id); applyArena({ id: a.id, image: 'arenas/' + a.id + '.jpg', video: 'arenas/' + a.id + '_loop.mp4', tint: a.tint }); }
+  renderArenaRow(a.id); applyArena({ id: a.id, image: 'arenas/' + a.id + '.jpg', video: 'arenas/' + a.id + '_loop.mp4', ground: 'arenas/' + a.id + '_ground.jpg', tint: a.tint }); }
 
 /* ---------- roster: shipped Crashers (FLUX 3 bodies + LTX-2 movesets + voiced lines), free for everyone ---------- */
 const ROSTER = [
