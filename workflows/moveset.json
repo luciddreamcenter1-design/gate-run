@@ -34,37 +34,37 @@
       }
     },
     "imp": {
-      "keyframe": "Full-body side view of a small shadow imp monster for an anime action game: a hunched creature of black smoke and violet crystal shards with glowing red eyes, sharp claws, facing right, entire body visible with empty space around, centered. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
+      "keyframe": "Full-body side view of a small riftspawn skitter monster for an anime action game: a hunched creature of black smoke and violet crystal shards with glowing red eyes, sharp claws, facing right, entire body visible with empty space around, centered. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
       "moves": {
         "move": {
           "frames": 49,
           "loop": true,
-          "motion": "Locked-off static camera, the creature stays centered and the same size. The shadow imp scuttles in place facing right, an aggressive hopping crawl cycle, smoke trailing off its body, red eyes flickering. It does not travel across the frame. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting."
+          "motion": "Locked-off static camera, the creature stays centered and the same size. The skitter scuttles in place facing right, an aggressive hopping crawl cycle, smoke trailing off its body, red eyes flickering. It does not travel across the frame. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting."
         },
         "attack": {
           "frames": 49,
           "loop": false,
-          "motion": "Locked-off static camera, the creature stays centered. The shadow imp rears back then lunges with a vicious claw swipe to the right, then recovers. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, fast motion."
+          "motion": "Locked-off static camera, the creature stays centered. The skitter rears back then lunges with a vicious claw swipe to the right, then recovers. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, fast motion."
         }
       }
     },
     "brute": {
-      "keyframe": "Full-body side view of a hulking shadow brute monster for an anime action game: a towering armored beast of black obsidian and violet glowing cracks with two curved horns and huge fists, glowing red eyes, facing right, entire body visible with empty space around, centered. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
+      "keyframe": "Full-body side view of a hulking riftspawn bulwark monster for an anime action game: a towering armored beast of black obsidian and violet glowing cracks with two curved horns and huge fists, glowing red eyes, facing right, entire body visible with empty space around, centered. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
       "moves": {
         "move": {
           "frames": 49,
           "loop": true,
-          "motion": "Locked-off static camera, the creature stays centered and the same size. The shadow brute stomps in place facing right, a heavy menacing walk cycle, shoulders rolling, violet cracks pulsing. It does not travel across the frame. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting."
+          "motion": "Locked-off static camera, the creature stays centered and the same size. The bulwark stomps in place facing right, a heavy menacing walk cycle, shoulders rolling, violet cracks pulsing. It does not travel across the frame. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting."
         },
         "attack": {
           "frames": 49,
           "loop": false,
-          "motion": "Locked-off static camera, the creature stays centered. The shadow brute raises both fists high and smashes them down in front of it to the right with a shockwave of violet energy, then recovers. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, heavy powerful motion."
+          "motion": "Locked-off static camera, the creature stays centered. The bulwark raises both fists high and smashes them down in front of it to the right with a shockwave of violet energy, then recovers. Flat pure green background that never changes. semi-realistic manhwa action style, glossy high-contrast lighting, heavy powerful motion."
         }
       }
     },
     "boss": {
-      "keyframe": "Full-body side view of a towering anime demon lord boss, the Shadow Sovereign: a tall armored figure of black smoke and violet crystal with a jagged crown of golden horns, a tattered cape of darkness, a huge cleaver blade of violet energy, burning red eyes, facing right, entire body visible with empty space around, centered. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
+      "keyframe": "Full-body side view of a towering anime demon lord boss, the Hollow King: a tall armored figure of black smoke and violet crystal with a jagged crown of golden horns, a tattered cape of darkness, a huge cleaver blade of violet energy, burning red eyes, facing right, entire body visible with empty space around, centered. {green}. Semi-realistic Korean action webtoon (manhwa) art, realistic proportions and anatomy, sharp detailed rendering, glossy high-contrast lighting, deep shadows, cold blue and violet aura, glowing eyes, vertical 2:3 frame.",
       "moves": {
         "idle": {
           "frames": 49,

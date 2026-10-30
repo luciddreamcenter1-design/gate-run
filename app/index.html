@@ -74,12 +74,12 @@ a{color:var(--gate2)}
   <div class="card">
     <div class="kicker">Gatecrashers · Gate Run</div>
     <h1>Step through the Gate as yourself.</h1>
-    <p>Upload a selfie. ComfyUI turns you into an anime hunter, opens a Gate behind you, and drops you into the fight.</p>
-    <label class="field" for="nameIn">Hunter name</label>
+    <p>Upload a selfie. ComfyUI turns you into a Gatecrasher, directs your own trailer, and drops you into an endless run of Gates.</p>
+    <label class="field" for="nameIn">Crasher name</label>
     <input type="text" id="nameIn" maxlength="16" placeholder="Your name" autocomplete="off">
     <input type="file" id="fileIn" accept="image/*" capture="user" hidden>
     <button class="btn" id="bSelfie">Take or upload a selfie</button>
-    <button class="btn ghost" id="bGuest">Play as a guest hunter</button>
+    <button class="btn ghost" id="bGuest">Play as a guest Crasher</button>
     <div class="pill"><span class="dot" id="cDot"></span><span id="cTxt">Checking for ComfyUI…</span></div>
   </div>
 </section>
@@ -87,14 +87,14 @@ a{color:var(--gate2)}
 <!-- FORGE -->
 <section class="screen" id="sForge">
   <div class="card">
-    <div class="kicker">Hunter Forge</div>
-    <h2 id="forgeTitle">Forging your hunter</h2>
+    <div class="kicker">Crasher Forge</div>
+    <h2 id="forgeTitle">Forging your Crasher</h2>
     <div class="pair"><canvas id="selfieThumb" width="240" height="240"></canvas><span class="arrow">→</span><canvas id="hunterThumb" width="240" height="240"></canvas></div>
     <ul class="steps">
       <li id="st1"><span class="ic"></span><div>Reading your photo</div></li>
-      <li id="st2"><span class="ic"></span><div>Forging your anime hunter<small>FLUX 3 image edit</small></div></li>
+      <li id="st2"><span class="ic"></span><div>Forging your Crasher<small>FLUX 3 image edit</small></div></li>
       <li id="st3"><span class="ic"></span><div>Directing your trailer<small>3-shot trailer · FLUX 3 keyframes + LTX-2 + LoRA</small></div></li>
-      <li id="st4"><span class="ic"></span><div>Animating your hunter<small>Full-body moveset · LTX-2 on Comfy Cloud</small></div></li>
+      <li id="st4"><span class="ic"></span><div>Animating your Crasher<small>Full-body moveset · LTX-2 on Comfy Cloud</small></div></li>
     </ul>
     <button class="btn" id="bEnter" disabled>Enter the Gate</button>
     <div class="tiny" id="forgeNote"></div>
@@ -105,9 +105,9 @@ a{color:var(--gate2)}
 <section class="screen" id="sEnd">
   <div class="card">
     <div class="kicker" id="endKicker">Gate cleared</div>
-    <img id="endImg" alt="Your Hunter License">
-    <button class="btn" id="bShare" style="display:none">Share my Hunter License</button>
-    <button class="btn" id="bSave">Save my Hunter License</button>
+    <img id="endImg" alt="Your Crasher Pass">
+    <button class="btn" id="bShare" style="display:none">Share my Crasher Pass</button>
+    <button class="btn" id="bSave">Save my Crasher Pass</button>
     <button class="btn" id="bReel" style="display:none">Make my Reel</button>
     <button class="btn ghost" id="bClip" style="display:none">Save my trailer</button>
     <div class="row"><button class="btn ghost" id="bAgain">Run it again</button><button class="btn ghost" id="bNew">New selfie</button></div>
@@ -310,7 +310,7 @@ addEventListener('resize', resize); resize();
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
 let mode = 'menu', T = 0, last = performance.now();
-let hunterName = 'Hunter', portrait = null, selfieImg = null, clipURL = null, clipIsVideo = false, clipPlate = false, clipPromise = null, usedComfy = false;
+let hunterName = 'Crasher', portrait = null, selfieImg = null, clipURL = null, clipIsVideo = false, clipPlate = false, clipPromise = null, usedComfy = false;
 const routesUsed = {};
 let trailer = null;
 let P = null, S = null, enemies = [], shards = [], parts = [], texts = [], slashes = [];
@@ -322,7 +322,15 @@ function gateScale() { return clamp(Math.min(W, H) / 640, .7, 1.25); }
 
 /* ---------- start / forge ---------- */
 $('#bSelfie').onclick = () => $('#fileIn').click();
-$('#bGuest').onclick = () => { personalSprites = null; window.resetHunterSprites && window.resetHunterSprites(); hunterName = $('#nameIn').value.trim() || 'Guest Hunter'; portrait = guestAvatar(); usedComfy = false; clipURL = null; beginIntro(); };
+$('#bGuest').onclick = () => { personalSprites = null; window.resetHunterSprites && window.resetHunterSprites(); hunterName = $('#nameIn').value.trim() || 'Guest Crasher'; portrait = guestPortrait || guestAvatar(); usedComfy = false; clipURL = null; trailer = null; beginIntro(); };
+// guest face: cropped from the default manhwa Crasher's full-body keyframe (falls back to a drawn avatar)
+let guestPortrait = null;
+loadImg('sprites/src/hunter_body.png').then(img => { const w = img.naturalWidth, h = img.naturalHeight, c = document.createElement('canvas'); c.width = c.height = 512;
+  const x = c.getContext('2d', { willReadFrequently: true }); const sd = w * .24; x.drawImage(img, w * .53 - sd / 2, h * .2 - sd / 2, sd, sd, 0, 0, 512, 512);
+  const d = x.getImageData(0, 0, 512, 512), p = d.data;
+  for (let o = 0; o < p.length; o += 4) { const m = Math.max(p[o], p[o + 2]), k = Math.max(0, Math.min(1, (p[o + 1] - m - 30) / 60));   // key green -> night violet
+    if (p[o + 1] > m) p[o + 1] = m + (p[o + 1] - m) * .15; p[o] = p[o] * (1 - k) + 20 * k; p[o + 1] = p[o + 1] * (1 - k) + 15 * k; p[o + 2] = p[o + 2] * (1 - k) + 51 * k; }
+  x.putImageData(d, 0, 0); guestPortrait = c; }).catch(() => {});
 $('#fileIn').onchange = e => { const f = e.target.files[0]; if (f) forge(f); e.target.value = ''; };
 
 function setStep(n, state, note) {
@@ -332,7 +340,7 @@ function setStep(n, state, note) {
 function drawThumb(id, src) { const c = $(id), x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); if (src) x.drawImage(src, 0, 0, c.width, c.height); }
 
 async function forge(file) {
-  hunterName = $('#nameIn').value.trim() || 'Hunter';
+  hunterName = $('#nameIn').value.trim() || 'Crasher';
   show('sForge'); $('#bEnter').disabled = true; $('#forgeNote').textContent = '';
   $('#hunterThumb').classList.remove('hunter-glow');
   personalSprites = null; forgeMoveset.cur = null; window.resetHunterSprites && window.resetHunterSprites();
@@ -376,7 +384,7 @@ async function forge(file) {
       })).then(() => {
         if (!count()) return setStep(3, 'fail', 'Trailer skipped: no clip route worked');
         setStep(3, 'done', 'Your trailer is ready · ' + count() + ' shots · ' + ROUTE_LABEL(routesUsed.clip));
-        if (mode === 'play') { sysMsg('[SYSTEM] Your trailer is ready.'); AK.vo('vo_clip_ready'); }
+        if (mode === 'play') { sysMsg('[RIFT OS] Your trailer is ready.'); AK.vo('vo_clip_ready'); }
         if (mode === 'end') showEndButtons();
       });
     } catch (err) {
@@ -389,11 +397,11 @@ async function forge(file) {
     if (!comfyOK) { setStep(2, 'run', 'Preview filter (ComfyUI makes the real anime version)'); await sleep(700); }
     hunter = toonify(selfieImg);
     setStep(2, 'done', comfyOK ? 'Preview filter used' : 'Preview filter (ComfyUI makes the real anime version)');
-    if (!comfyOK) { setStep(3, 'skip', 'Needs server.py with a Comfy route'); setStep(4, 'skip', 'Default hunter in preview mode'); }
+    if (!comfyOK) { setStep(3, 'skip', 'Needs server.py with a Comfy route'); setStep(4, 'skip', 'Default Crasher in preview mode'); }
   }
   portrait = squareCanvas(hunter, 512);
   drawThumb('#hunterThumb', portrait); $('#hunterThumb').classList.add('hunter-glow');
-  $('#forgeTitle').textContent = 'Hunter ' + hunterName + ' is ready';
+  $('#forgeTitle').textContent = 'Crasher ' + hunterName + ' is ready';
   $('#bEnter').disabled = false;
 }
 $('#bEnter').onclick = () => { AK.init(); if (trailer && trailer.shots.some(Boolean) && !clipPlate) playTrailer(beginIntro); else if (clipURL) playClip(beginIntro); else beginIntro(); };
@@ -420,9 +428,9 @@ async function forgeMoveset(hunterBlob) {
     if (!Object.keys(set.anims).length) throw new Error('could not bake moves');
     personalSprites = set;
     if (window.setHunterSprites) window.setHunterSprites(set);
-    setStep(4, 'done', 'Your hunter moves like you · ' + got.length + ' LTX-2 moves');
-    if (mode === 'play') { sysMsg('[SYSTEM] Hunter form synchronized.'); S.flash = .8; burst(P.x, P.y, '#38d6ff', 40, 260); AK.play('levelup', .8); }
-  } catch (e) { console.warn('moveset', e); setStep(4, 'fail', 'Using the default hunter body: ' + String(e.message || e).slice(0, 80)); }
+    setStep(4, 'done', 'Your Crasher moves like you · ' + got.length + ' LTX-2 moves');
+    if (mode === 'play') { sysMsg('[RIFT OS] Crasher form synchronized.'); S.flash = .8; burst(P.x, P.y, '#38d6ff', 40, 260); AK.play('levelup', .8); }
+  } catch (e) { console.warn('moveset', e); setStep(4, 'fail', 'Using the default Crasher body: ' + String(e.message || e).slice(0, 80)); }
 }
 // same idea as tools/bake_sprites.py, in the browser: key the green, trim the still frames LTX holds, tile into a sheet
 async function bakeMove(url, spec) {
@@ -466,10 +474,10 @@ async function bakeMove(url, spec) {
   return { anim: { canvas: atlas, cols: COLS, rows, n: sel.length, loop: !!spec.loop }, anchor: { top: top / FH, foot: foot / FH, cx: (l + rr) / 2 / FW } };
 }
 function trailerSegments(endLine) {
-  const segs = [{ type: 'card', dur: 1.7, text: 'A GATE HAS OPENED', sub: '[ SYSTEM ]', sfx: 'riser' }];
+  const segs = [{ type: 'card', dur: 1.7, text: 'A GATE HAS OPENED', sub: '[ RIFT OS ]', sfx: 'riser' }];
   trailer.shots.forEach((c, i) => { if (!c) return; const sh = trailer.spec.shots[i];
     segs.push({ type: 'video', src: c.url, use: sh.use, card: sh.card.replace('{NAME}', hunterName.toUpperCase()), sfx: segs.length === 1 ? 'gate_open' : segs.length === 2 ? 'braam' : 'whoosh', flash: segs.length > 1 }); });
-  segs.push({ type: 'end', dur: 2.8, portrait, line: endLine || 'HUNTER ' + hunterName.toUpperCase(), sfx: 'braam' });
+  segs.push({ type: 'end', dur: 2.8, portrait, line: endLine || 'CRASHER ' + hunterName.toUpperCase(), sfx: 'braam' });
   return segs;
 }
 async function playTrailer(after) {
@@ -501,7 +509,7 @@ function beginIntro() {
   S = { score: 0, kills: 0, time: 0, spawn: 1.2, boss: false, shake: 0, msg: '', msgT: 0, elapsed: 0, combo: 0, comboT: 0, maxCombo: 0, tele: [], hits: 0, pickups: [],
         gate: 0, phase: 'break', breakT: 2.2, toSpawn: 0, brutes: 0 };
   P.weapon = null;
-  sysMsg('[SYSTEM] A Gate has opened.');
+  sysMsg('[RIFT OS] A Gate has opened.');
   AK.play('gate_open', .8); setTimeout(() => AK.vo('vo_gate_open'), 600); AK.music(.32);
 }
 function startPlay() { mode = 'play'; document.querySelectorAll('.tbtn').forEach(b => b.style.display = isTouch ? 'block' : 'none'); GameRec.start(7, 'opener'); }
@@ -543,8 +551,8 @@ const COMBO = {
 const WEAPONS = {
   flame:   { name: 'FLAME KATANA',          color: '#ff7a45', dmg: 1,   speed: 1,    range: 1.1,  kb: 1,   burn: 2.2, dur: 22 },
   thunder: { name: 'THUNDER BLADE',         color: '#ffe66a', dmg: 1,   speed: .95,  range: 1.45, kb: 1.1, chain: 2,   dur: 22 },
-  twin:    { name: 'SHADOW TWIN DAGGERS',   color: '#b18cff', dmg: 1,   speed: .62,  range: .85,  kb: .7,  twin: true, dur: 22 },
-  cleaver: { name: "SOVEREIGN'S CLEAVER",   color: '#ffd84a', dmg: 3,   speed: 1.45, range: 1.55, kb: 1.9, dur: 30 },
+  twin:    { name: 'RIFT TWIN DAGGERS',   color: '#b18cff', dmg: 1,   speed: .62,  range: .85,  kb: .7,  twin: true, dur: 22 },
+  cleaver: { name: "HOLLOW KING'S CLEAVER",   color: '#ffd84a', dmg: 3,   speed: 1.45, range: 1.55, kb: 1.9, dur: 30 },
 };
 const WPN = () => P.weapon ? WEAPONS[P.weapon.kind] : null;
 const atkSpeed = () => Math.max(.5, Math.pow(.95, P.lvl - 1) * (WPN() ? WPN().speed : 1));
@@ -554,7 +562,7 @@ function dropWeapon(x, y, kind) {
 }
 function equipWeapon(kind) {
   const w = WEAPONS[kind]; P.weapon = { kind, t: w.dur };
-  sysMsg('[SYSTEM] Weapon acquired: ' + w.name); floatText(P.x, P.y - 70, w.name, w.color);
+  sysMsg('[RIFT OS] Weapon acquired: ' + w.name); floatText(P.x, P.y - 70, w.name, w.color);
   S.flash = .5; burst(P.x, P.y, w.color, 40, 260); AK.play('levelup', .8); AK.play('braam', .5);
 }
 function nearestEnemy(maxD) { let best = null, bd = maxD; for (const e of enemies) { const d = Math.hypot(e.x - P.x, (e.y - P.y) * 1.4); if (d < bd) { bd = d; best = e; } } return best; }
@@ -688,16 +696,16 @@ function update(rawDt) {
     if (S.breakT <= 0) {
       S.gate++; S.phase = 'fight'; const gN = S.gate, bossGate = gN % 5 === 0;
       S.toSpawn = bossGate ? 4 + gN : 5 + Math.round(gN * 3.4); S.brutes = gN >= 2 ? Math.floor(gN * .7) : 0; S.spawn = .6;
-      sysMsg('[SYSTEM] Gate ' + gN + ' has opened.'); AK.play('gate_open', .7); if (gN > 1) AK.vo('vo_gate_open');
-      if (bossGate) { spawnEnemy('boss'); sysMsg('[SYSTEM] Gate ' + gN + ' · Gate Boss detected.'); S.shake = 14;
-        S.cine = { t: 0, dur: 2.8, slow: 1.8, title: 'GATE ' + gN + ' BOSS', sub: 'THE SHADOW SOVEREIGN', boss: enemies[enemies.length - 1] };
+      sysMsg('[RIFT OS] Gate ' + gN + ' has opened.'); AK.play('gate_open', .7); if (gN > 1) AK.vo('vo_gate_open');
+      if (bossGate) { spawnEnemy('boss'); sysMsg('[RIFT OS] Gate ' + gN + ' · Breach Lord detected.'); S.shake = 14;
+        S.cine = { t: 0, dur: 2.8, slow: 1.8, title: 'BREACH LORD', sub: 'GATE ' + gN + ' · THE HOLLOW KING', boss: enemies[enemies.length - 1] };
         AK.play('boss', 1); AK.play('braam', .8); setTimeout(() => AK.vo('vo_boss'), 700); if (!S.boss) GameRec.start(9, 'boss'); S.boss = true; }
     }
   } else if (S.toSpawn <= 0 && !enemies.length) {
     S.phase = 'break'; S.breakT = 4.5; const bonus = 150 * S.gate;
     S.score += bonus; floatText(P.x, P.y - 60, 'GATE CLEAR +' + bonus, '#ffd84a');
     if (P.hp < 5) { P.hp++; floatText(P.x, P.y - 84, '+1 ♥', '#ff4d6d'); }
-    sysMsg('[SYSTEM] Gate ' + S.gate + ' cleared.'); AK.play('win', .6); AK.vo('vo_cleared');
+    sysMsg('[RIFT OS] Gate ' + S.gate + ' cleared.'); AK.play('win', .6); AK.vo('vo_cleared');
     dropWeapon(W / 2 + rand(-60, 60), clamp(gatePos().y + 190, 120, H - 120));   // the Gate leaves a weapon behind
   }
   // player
@@ -769,7 +777,7 @@ function update(rawDt) {
         e.state = 'atk'; e.st = 0; e.hitDone = false; S.tele = S.tele.filter(t => t.owner !== e);
         if (e.type === 'imp') { e.vx = e.face * 520; e.vy = ddy * 1.6; }
         if (e.type !== 'imp') { S.shake = e.type === 'boss' ? 16 : 9; AK.play(e.type === 'boss' ? 'braam' : 'hit', e.type === 'boss' ? .7 : .9, .6); burst(e.x + e.face * 60, e.y, '#7c5cff', 26, 260); }
-        if (e.summon) { for (let i = 0; i < 3; i++) { spawnEnemy('imp'); const n = enemies[enemies.length - 1]; n.x = e.x + rand(-80, 80); n.y = e.y + rand(-60, 60); } sysMsg('[SYSTEM] The Sovereign calls its army.'); }
+        if (e.summon) { for (let i = 0; i < 3; i++) { spawnEnemy('imp'); const n = enemies[enemies.length - 1]; n.x = e.x + rand(-80, 80); n.y = e.y + rand(-60, 60); } sysMsg('[RIFT OS] The Hollow King calls the Riftspawn.'); }
       }
     } else if (e.state === 'atk') {
       ANIM(e.anim, 'attack', 0, .3 + .7 * Math.min(1, e.st / e.atk));
@@ -790,7 +798,7 @@ function update(rawDt) {
     if (e.type === 'boss') dropWeapon(e.x, e.y, 'cleaver'); else if (e.type === 'brute' && Math.random() < .3) dropWeapon(e.x, e.y);
     for (let i = 0; i < e.drop; i++) shards.push({ x: e.x + rand(-12, 12), y: e.y + rand(-12, 12), vx: rand(-80, 80), vy: rand(-80, 80), t: 0 });
     S.tele = S.tele.filter(t => t.owner !== e);
-    if (e.type === 'boss') { S.shake = 20; sysMsg('[SYSTEM] Gate Boss defeated.'); S.stop = .14; S.flash = 1; S.cine = { t: 0, dur: 1.8, slow: 1.4, title: 'GATE BOSS DEFEATED', sub: hunterName.toUpperCase() }; AK.play('braam', 1); AK.play('win', .7); }
+    if (e.type === 'boss') { S.shake = 20; sysMsg('[RIFT OS] Breach Lord defeated.'); S.stop = .14; S.flash = 1; S.cine = { t: 0, dur: 1.8, slow: 1.4, title: 'BREACH LORD DOWN', sub: hunterName.toUpperCase() }; AK.play('braam', 1); AK.play('win', .7); }
     else if (e.type === 'brute') { S.stop = .06; AK.play('hit', .8, .7); }
   }
   enemies = enemies.filter(e => e.hp > 0);
@@ -798,7 +806,7 @@ function update(rawDt) {
   // weapon pickups + timer
   for (const pk of S.pickups) { pk.t += dt; if (Math.hypot(P.x - pk.x, (P.y - pk.y) * 1.3) < 38) { pk.got = true; equipWeapon(pk.kind); } }
   S.pickups = S.pickups.filter(pk => !pk.got && pk.t < 20);
-  if (P.weapon && (P.weapon.t -= dt) <= 0) { P.weapon = null; sysMsg('[SYSTEM] Weapon faded.'); }
+  if (P.weapon && (P.weapon.t -= dt) <= 0) { P.weapon = null; sysMsg('[RIFT OS] Weapon faded.'); }
   for (const e of enemies) if (e.burn > 0) {
     e.burn -= dt; e.burnTick = (e.burnTick || 0) - dt;
     if (e.burnTick <= 0) { e.burnTick = .45; e.hp -= 1; e.hit = .06; floatText(e.x, e.y - e.r - 8, '18', '#ff7a45'); burst(e.x, e.y - 10, '#ff7a45', 5, 90); }
@@ -814,7 +822,7 @@ function update(rawDt) {
   }
   shards = shards.filter(s => !s.got && s.t < 12);
   const need = 5 + P.lvl * 4;
-  if (P.xp >= need) { P.xp -= need; P.lvl++; sysMsg('[SYSTEM] Level up. Lv. ' + P.lvl); AK.play('levelup', .7); AK.vo('vo_levelup'); burst(P.x, P.y, '#ffd84a', 30, 240); if (P.hp < 5 && P.lvl % 2 === 0) P.hp++; }
+  if (P.xp >= need) { P.xp -= need; P.lvl++; sysMsg('[RIFT OS] Level up. Lv. ' + P.lvl); AK.play('levelup', .7); AK.vo('vo_levelup'); burst(P.x, P.y, '#ffd84a', 30, 240); if (P.hp < 5 && P.lvl % 2 === 0) P.hp++; }
 
 }
 
@@ -891,7 +899,7 @@ function drawHUD() {
   g.fillStyle = '#ffd84a'; g.font = '600 12px "Chakra Petch"'; g.fillText('Lv.' + P.lvl, 172, top + 48);
   const ty = W < 560 ? top + 84 : top;
   g.textAlign = 'center'; g.font = '600 11px "Chakra Petch"'; g.fillStyle = '#9a9cc4';
-  g.fillText(S.phase === 'break' ? (S.gate ? 'NEXT GATE IN ' + Math.ceil(S.breakT) : 'GET READY') : (S.toSpawn + enemies.length) + ' SHADOWS LEFT', W / 2, ty + 14);
+  g.fillText(S.phase === 'break' ? (S.gate ? 'NEXT GATE IN ' + Math.ceil(S.breakT) : 'GET READY') : (S.toSpawn + enemies.length) + ' RIFTSPAWN LEFT', W / 2, ty + 14);
   g.font = '700 26px "Chakra Petch"'; g.fillStyle = S.gate % 5 === 0 && S.phase === 'fight' ? '#ffd84a' : '#eef0ff';
   g.fillText('GATE ' + Math.max(1, S.gate + (S.phase === 'break' && S.gate ? 1 : 0)), W / 2, ty + 40);
   g.textAlign = 'right'; g.font = '600 11px "Chakra Petch"'; g.fillStyle = '#9a9cc4'; g.fillText('SCORE', W - 16, top + 14);
@@ -913,7 +921,7 @@ function drawHUD() {
     g.save(); g.globalAlpha = a; g.textAlign = 'right';
     g.shadowColor = '#38d6ff'; g.shadowBlur = 16; g.fillStyle = '#eef0ff'; g.font = '700 ' + sz + 'px "Chakra Petch"'; g.fillText(S.combo, x - 52, y);
     g.shadowBlur = 0; g.font = '700 16px "Chakra Petch"'; g.fillStyle = '#9fe8ff'; g.fillText('HITS', x, y);
-    const style = S.combo >= 30 ? 'SOVEREIGN' : S.combo >= 20 ? 'SAVAGE' : S.combo >= 10 ? 'STYLISH' : '';
+    const style = S.combo >= 30 ? 'LEGENDARY' : S.combo >= 20 ? 'SAVAGE' : S.combo >= 10 ? 'STYLISH' : '';
     if (style) { g.fillStyle = '#ffd84a'; g.font = '700 14px "Chakra Petch"'; g.fillText(style, x, y + 22); }
     g.restore();
   }
@@ -1015,10 +1023,10 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 
-/* ---------- end + Hunter License ---------- */
-const RANKS = [['S', 15], ['A', 10], ['B', 7], ['C', 5], ['D', 3], ['E', 0]];   // by gate reached
-function rankOf() { const gN = S ? S.gate : 0; for (const [r, v] of RANKS) if (gN >= v) return r; return 'E'; }
-function rankColor(r) { return { S: '#ffd84a', A: '#ff7a45', B: '#b18cff', C: '#38d6ff', D: '#4dffb0', E: '#9a9cc4' }[r]; }
+/* ---------- end + Crasher Pass ---------- */
+const RANKS = [['Legend', 15], ['Warlord', 10], ['Vanguard', 7], ['Breaker', 5], ['Runner', 3], ['Rookie', 0]];   // by gate reached
+function rankOf() { const gN = S ? S.gate : 0; for (const [r, v] of RANKS) if (gN >= v) return r; return 'Rookie'; }
+function rankColor(r) { return { Legend: '#ffd84a', Warlord: '#ff7a45', Vanguard: '#b18cff', Breaker: '#38d6ff', Runner: '#4dffb0', Rookie: '#9a9cc4' }[r]; }
 
 let licenseURL = null;
 async function finish(cleared) {
@@ -1029,7 +1037,7 @@ async function finish(cleared) {
   await document.fonts.ready;
   licenseURL = makeLicense(cleared);
   $('#endImg').src = licenseURL;
-  $('#endKicker').textContent = 'Fell at Gate ' + S.gate + ' · ' + rankOf() + '-Rank Hunter';
+  $('#endKicker').textContent = 'Fell at Gate ' + S.gate + ' · ' + rankOf();
   showEndButtons();
   $('#bShare').style.display = navigator.canShare && navigator.canShare({ files: [new File([new Blob()], 'x.png', { type: 'image/png' })] }) ? 'flex' : 'none';
   show('sEnd');
@@ -1040,7 +1048,7 @@ function makeLicense(cleared) {
   for (let i = 0; i < 6; i++) { x.strokeStyle = 'rgba(124,92,255,' + (.18 - i * .025) + ')'; x.lineWidth = 2; x.beginPath(); x.ellipse(w / 2, 560, 360 + i * 70, 420 + i * 70, 0, 0, 6.283); x.stroke(); }
   x.textAlign = 'center';
   x.fillStyle = '#38d6ff'; x.font = '600 30px "Chakra Petch"'; x.fillText('G A T E C R A S H E R S', w / 2, 92);
-  x.fillStyle = '#eef0ff'; x.font = '700 68px "Chakra Petch"'; x.fillText('HUNTER LICENSE', w / 2, 168);
+  x.fillStyle = '#eef0ff'; x.font = '700 68px "Chakra Petch"'; x.fillText('CRASHER PASS', w / 2, 168);
   const ps = 620, px = (w - ps) / 2, py = 220;
   x.save(); x.shadowColor = '#38d6ff'; x.shadowBlur = 50; x.fillStyle = '#000'; x.fillRect(px, py, ps, ps); x.restore();
   x.save(); x.beginPath(); x.rect(px, py, ps, ps); x.clip(); x.drawImage(portrait, px, py, ps, ps); x.restore();
@@ -1048,9 +1056,9 @@ function makeLicense(cleared) {
   const r = rankOf(), rc = rankColor(r), bx = px + ps - 20, by = py + ps - 20;   // rank badge
   x.save(); x.translate(bx, by); x.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; x.lineTo(Math.cos(a) * 110, Math.sin(a) * 110); } x.closePath();
   x.fillStyle = '#0b0918'; x.fill(); x.lineWidth = 8; x.strokeStyle = rc; x.shadowColor = rc; x.shadowBlur = 30; x.stroke(); x.shadowBlur = 0;
-  x.fillStyle = rc; x.font = '700 120px "Chakra Petch"'; x.fillText(r, 0, 42); x.restore();
+  x.fillStyle = rc; x.font = '600 24px "Chakra Petch"'; x.fillText('GATE', 0, -44); x.font = '700 ' + (S.gate > 99 ? 72 : 96) + 'px "Chakra Petch"'; x.fillText(String(S.gate), 0, 40); x.restore();
   x.fillStyle = '#eef0ff'; x.font = '700 64px "Chakra Petch"'; x.fillText(hunterName.toUpperCase().slice(0, 16), w / 2, 950);
-  x.fillStyle = '#9a9cc4'; x.font = '500 30px Inter'; x.fillText('Survived ' + Math.max(0, S.gate - 1) + ' Gates · max combo ' + S.maxCombo, w / 2, 1000);
+  x.fillStyle = '#9a9cc4'; x.font = '500 30px Inter'; x.fillText(rankOf() + ' · crashed ' + Math.max(0, S.gate - 1) + ' Gates · max combo ' + S.maxCombo, w / 2, 1000);
   const stats = [['GATE', String(S.gate)], ['SCORE', S.score.toLocaleString()], ['KILLS', String(S.kills)]];
   stats.forEach(([k, v], i) => {
     const cx = w / 2 + (i - 1) * 300;
@@ -1077,14 +1085,14 @@ async function renderOnce(label, segments, narration) {
   return blob;
 }
 function reelSegments() {
-  const r = rankOf(), segs = [{ type: 'card', dur: 1.3, text: 'A GATE HAS OPENED', sub: '[ SYSTEM ]', sfx: 'riser' }];
+  const r = rankOf(), segs = [{ type: 'card', dur: 1.3, text: 'A GATE HAS OPENED', sub: '[ RIFT OS ]', sfx: 'riser' }];
   const sh = trailer.shots, spec = trailer.spec.shots;
-  if (sh[0]) segs.push({ type: 'video', src: sh[0].url, use: [0, 4.2], card: 'HUNTER ' + hunterName.toUpperCase(), sfx: 'gate_open' });
+  if (sh[0]) segs.push({ type: 'video', src: sh[0].url, use: [0, 4.2], card: 'CRASHER ' + hunterName.toUpperCase(), sfx: 'gate_open' });
   if (sh[1]) segs.push({ type: 'video', src: sh[1].url, use: [0.4, 3.2], flash: true, sfx: 'braam' });
-  if (GameRec.url) segs.push({ type: 'video', src: GameRec.url, use: [0, Math.min(GameRec.dur || 7, 9)], flash: true, vol: 1, card: GameRec.tag === 'boss' ? 'GATE BOSS' : 'THE HUNT' });
+  if (GameRec.url) segs.push({ type: 'video', src: GameRec.url, use: [0, Math.min(GameRec.dur || 7, 9)], flash: true, vol: 1, card: GameRec.tag === 'boss' ? 'BREACH LORD' : 'THE RUN' });
   if (sh[2]) segs.push({ type: 'video', src: sh[2].url, use: [0.4, 3.2], flash: true, sfx: 'whoosh' });
   segs.push({ type: 'image', img: $('#endImg'), dur: 3.2, flash: true, kenburns: true, sfx: 'win' });
-  segs.push({ type: 'end', dur: 2.4, portrait, line: 'GATE ' + S.gate + ' · ' + r + '-RANK', sfx: 'braam' });
+  segs.push({ type: 'end', dur: 2.4, portrait, line: 'GATE ' + S.gate + ' · ' + r.toUpperCase(), sfx: 'braam' });
   return segs;
 }
 async function shareOrSave(blob, name, text) {
@@ -1095,7 +1103,7 @@ async function shareOrSave(blob, name, text) {
 $('#bReel').onclick = async () => {
   try {
     const blob = await renderOnce('Reel', reelSegments(), null);
-    if (blob) shareOrSave(blob, 'gate-run-reel-' + slug() + ext(blob), hunterName + ' reached Gate ' + S.gate + ' (' + rankOf() + '-Rank Hunter). Beat that. #OpenSourceHiggsfield');
+    if (blob) shareOrSave(blob, 'gate-run-reel-' + slug() + ext(blob), hunterName + ' crashed ' + S.gate + ' Gates (' + rankOf() + '). Beat that. #OpenSourceHiggsfield');
   } catch (e) { console.warn(e); toast('Could not render the Reel: ' + e.message); }
 };
 
@@ -1111,22 +1119,22 @@ async function download(url, name) {
   }
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
 }
-$('#bSave').onclick = () => download(licenseURL, 'hunter-license-' + hunterName.replace(/\W+/g, '-').toLowerCase() + '.png');
+$('#bSave').onclick = () => download(licenseURL, 'crasher-pass-' + hunterName.replace(/\W+/g, '-').toLowerCase() + '.png');
 $('#bClip').onclick = async () => {
   try {
     if (trailer && trailer.shots.some(Boolean) && window.Director && Director.pickMime()) {
-      const blob = trailer.blob || (trailer.blob = await renderOnce('trailer', trailerSegments('GATE ' + S.gate + ' · ' + rankOf() + '-RANK'), trailer.narration));
+      const blob = trailer.blob || (trailer.blob = await renderOnce('trailer', trailerSegments('GATE ' + S.gate + ' · ' + rankOf().toUpperCase()), trailer.narration));
       if (blob) return shareOrSave(blob, 'gate-run-trailer-' + slug() + ext(blob), '#OpenSourceHiggsfield');
     }
     const b = await (await fetch(clipURL)).blob(); download(URL.createObjectURL(b), 'gate-opening' + ext(b));
   } catch (e) { window.open(clipURL, '_blank'); }
 };
 async function shareLicense() {
-  const blob = await (await fetch(licenseURL)).blob(), files = [new File([blob], 'hunter-license.png', { type: 'image/png' })];
+  const blob = await (await fetch(licenseURL)).blob(), files = [new File([blob], 'crasher-pass.png', { type: 'image/png' })];
   try {
     if (clipURL) { const c = await (await fetch(clipURL)).blob(); files.push(new File([c], 'gate-opening.' + (clipIsVideo ? 'mp4' : 'webp'), { type: c.type })); }
     if (!navigator.canShare(files.length > 1 ? { files } : { files: files.slice(0, 1) })) files.splice(1);
-    await navigator.share({ files, text: hunterName + ' reached Gate ' + S.gate + ' (' + rankOf() + '-Rank Hunter). Beat that. #OpenSourceHiggsfield' });
+    await navigator.share({ files, text: hunterName + ' crashed ' + S.gate + ' Gates (' + rankOf() + '). Beat that. #OpenSourceHiggsfield' });
   } catch (e) { if (e.name !== 'AbortError') toast('Share failed. Save it instead.'); }
 }
 $('#bShare').onclick = shareLicense;

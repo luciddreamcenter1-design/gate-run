@@ -1,13 +1,13 @@
 {
-  "_about": "Shot list for the personalized trailer. Each shot gets a FLUX 3 keyframe made from the hunter portrait, then LTX-2 animates it. {name} is the hunter name.",
+  "_about": "Shot list for the personalized trailer. Each shot gets a FLUX 3 keyframe made from the Gatecrasher portrait, then LTX-2 animates it. {name} is the Gatecrasher name.",
   "voice_id": "onwK4e9ZLuTAKqWW03F9",
-  "narration": "A Gate has opened. Hunter {name}... the hunt begins.",
+  "narration": "A Gate has opened. Crasher {name}... break through.",
   "shots": [
     {
       "id": "awaken",
       "keyframe": "The same character as in the reference image, same face, hair and outfit: dark tactical coat with glowing cyan trim and a blade on the back. Medium close-up, chest up, facing the camera with a confident half-smile, standing on a rain-slick night city street. Behind them, high in the sky, a jagged vertical rift of blue and violet light is tearing open, lightning arcing from it, violet light rimming their hair and shoulders. Vertical 9:16 frame, semi-realistic manhwa action style, glossy high-contrast lighting, dramatic rim light, high detail.",
-      "motion": "One continuous shot, no cuts, same framing as the first frame. The hunter faces the camera as the rift behind them tears wider, lightning arcs and sparks and small debris fly past. Wind whips their hair and coat. Their eyes flare cyan, they smirk, then turn their head to look back at the rift. Slow dolly-in toward the face. semi-realistic manhwa action style, glossy high-contrast lighting, smooth motion. Audio: deep rising hum, crackling electricity, rushing wind.",
-      "card": "HUNTER {NAME}",
+      "motion": "One continuous shot, no cuts, same framing as the first frame. The Gatecrasher faces the camera as the rift behind them tears wider, lightning arcs and sparks and small debris fly past. Wind whips their hair and coat. Their eyes flare cyan, they smirk, then turn their head to look back at the rift. Slow dolly-in toward the face. semi-realistic manhwa action style, glossy high-contrast lighting, smooth motion. Audio: deep rising hum, crackling electricity, rushing wind.",
+      "card": "CRASHER {NAME}",
       "use": [
         0.0,
         4.6
@@ -16,7 +16,7 @@
     {
       "id": "approach",
       "keyframe": "The same character as in the reference image, same face, hair and outfit: dark tactical coat with glowing cyan trim and a blade on the back. Wide cinematic shot from behind at a low three-quarter angle: they stand on a rain-slick night city street facing a towering jagged vertical rift of blue and violet light torn open in the middle of the street, lightning arcing from it, debris and glass floating in the air, puddles reflecting violet light. Vertical 9:16 frame, semi-realistic manhwa action style, glossy high-contrast lighting, dramatic rim light, high detail.",
-      "motion": "One continuous shot, no cuts. The hunter walks forward toward the towering rift of blue and violet light. The rift pulses and widens, lightning arcs, debris floats upward, wind whips the coat. Slow cinematic dolly-in behind the hunter. semi-realistic manhwa action style, glossy high-contrast lighting, smooth motion. Audio: rising roar of wind and crackling energy.",
+      "motion": "One continuous shot, no cuts. The Gatecrasher walks forward toward the towering rift of blue and violet light. The rift pulses and widens, lightning arcs, debris floats upward, wind whips the coat. Slow cinematic dolly-in behind the Gatecrasher. semi-realistic manhwa action style, glossy high-contrast lighting, smooth motion. Audio: rising roar of wind and crackling energy.",
       "card": "THE GATE IS OPEN",
       "use": [
         0.4,
@@ -25,8 +25,8 @@
     },
     {
       "id": "arrival",
-      "keyframe": "The same character as in the reference image, same face, hair and outfit: dark tactical coat with glowing cyan trim. Low-angle hero shot: they land in a crouch with a glowing cyan blade drawn, inside a vast violet dimension of floating broken city blocks under a swirling sky, a horde of shadow monsters with glowing red eyes in the distance. Their eyes glow cyan. Vertical 9:16 frame, semi-realistic manhwa action style, glossy high-contrast lighting, epic lighting, high detail.",
-      "motion": "One continuous shot, no cuts. The hunter rises from the crouch and raises the glowing cyan blade as the horde of shadow monsters charges from the distance. Floating rocks drift, violet sky swirls, sparks fly. Slow dolly-in toward the hunter's determined face. semi-realistic manhwa action style, glossy high-contrast lighting, smooth motion. Audio: deep boom, monsters roaring, blade humming.",
+      "keyframe": "The same character as in the reference image, same face, hair and outfit: dark tactical coat with glowing cyan trim. Low-angle hero shot: they land in a crouch with a glowing cyan blade drawn, inside a vast violet dimension of floating broken city blocks under a swirling sky, a horde of riftspawn monsters with glowing red eyes in the distance. Their eyes glow cyan. Vertical 9:16 frame, semi-realistic manhwa action style, glossy high-contrast lighting, epic lighting, high detail.",
+      "motion": "One continuous shot, no cuts. The Gatecrasher rises from the crouch and raises the glowing cyan blade as the horde of riftspawn monsters charges from the distance. Floating rocks drift, violet sky swirls, sparks fly. Slow dolly-in toward the Gatecrasher's determined face. semi-realistic manhwa action style, glossy high-contrast lighting, smooth motion. Audio: deep boom, monsters roaring, blade humming.",
       "card": "STEP THROUGH",
       "use": [
         0.4,

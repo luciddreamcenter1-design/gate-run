@@ -22,13 +22,13 @@
 |---|---|---|
 | **0:00–0:13** | **Cold open:** your auto-generated trailer, full screen, no UI. Card "A GATE HAS OPENED", then the three shots, then the end card with your face. | The trailer's own mix: narrator, riser, ▲ braam. No VO. |
 | 0:13–0:17 | Hard cut to black. White text: *"Ninety seconds ago, that was this."* | Silence, then a single `sfx_whoosh`. |
-| 0:17–0:26 | The Forge screen: the selfie sliding into the anime hunter. Hold on the side-by-side. | VO: "One selfie. FLUX 3 keeps your face and makes you a hunter." |
-| 0:26–0:34 | Speed-ramped (2×) progress: "Directing your trailer" and "Animating your hunter · 5/5 moves". Cut in a sprite sheet of your combo. | VO: "Then LTX-2 animates you: three trailer shots, and every move you make in the game." |
-| ▲ 0:34–0:52 | **Gameplay:** your full-body manhwa hunter (your face, LTX-animated) running and chaining the 3-hit combo, the combo counter climbing, an enemy telegraph you dash through, then the **GATE SLASH** special. Then the **boss entrance** (letterbox, slow motion, "GATE BOSS"). | Game audio only: slashes, hits, "[SYSTEM] Warning. Gate Boss detected." |
-| 0:52–1:00 | Boss defeated (white flash, slow-mo push-in), Hunter License card with rank badge. | `sfx_win`, narrator "Gate cleared." |
+| 0:17–0:26 | The Forge screen: the selfie sliding into the Gatecrasher. Hold on the side-by-side. | VO: "One selfie. FLUX 3 keeps your face and makes you a Crasher." |
+| 0:26–0:34 | Speed-ramped (2×) progress: "Directing your trailer" and "Animating your Crasher · 5/5 moves". Cut in a sprite sheet of your combo. | VO: "Then LTX-2 animates you: three trailer shots, and every move you make in the game." |
+| ▲ 0:34–0:52 | **Gameplay:** your full-body manhwa Crasher (your face, LTX-animated) running and chaining the 3-hit combo, the combo counter climbing, an enemy telegraph you dash through, then the **GATE SLASH** special. Then the **boss entrance** (letterbox, slow motion, "BREACH LORD"). | Game audio only: slashes, hits, "[RIFT OS] Warning. Breach Lord detected." |
+| 0:52–1:00 | Boss defeated (white flash, slow-mo push-in), Crasher Pass card with gate badge. | `sfx_win`, narrator "Gate cleared." |
 | 1:00–1:08 | Tap **Make my Reel**: the Reel plays and renders on device, then the phone share sheet. | VO: "One tap: a vertical Reel of your trailer and your run, ready to post." |
 | 1:08–1:38 | **Under the hood** (screen recording, slow pans): (1) the LTX-2 + LoRA graph in ComfyUI with the `IN_IMAGE`, `IN_PROMPT`, `IN_LORA`, `OUT` titles highlighted; (2) `workflows/trailer.json`, the editable shot list; (3) `server.py` console showing the route chain and a route switch; (4) this diagram: | VO: "Two Comfy APIs, one SDK. Comfy Router for FLUX 3 keyframes, ElevenLabs voice and sound, and video upscaling. Comfy Cloud runs the actual ComfyUI workflow: LTX-2 with a camera LoRA. If a route fails, the server switches to the next one. The shot list is a JSON file, so you can direct your own trailer." |
-| | `selfie → Router: FLUX 3 → hunter → Router: FLUX 3 keyframes ×2 → Cloud: LTX-2 + LoRA ×3 (parallel) → Router: upscale → in-browser edit: cards, grade, voice, SFX → trailer + Reel` | |
+| | `selfie → Router: FLUX 3 → Crasher → Router: FLUX 3 keyframes ×2 → Cloud: LTX-2 + LoRA ×3 (parallel) → Router: upscale → in-browser edit: cards, grade, voice, SFX → trailer + Reel` | |
 | ▲ 1:38–1:52 | **Montage:** 3–4 different players' trailers, cut on the braam, each ending on their end card. | Music up. No VO. |
 | 1:52–2:00 | End card: "GATE RUN · open source · #OpenSourceHiggsfield", repo URL, "Clone it. Run it on your own ComfyUI." | Final ▲ braam, music out. |
 

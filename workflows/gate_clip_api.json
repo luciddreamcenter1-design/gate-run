@@ -1,31 +1,219 @@
 {
-  "1": {"class_type": "CheckpointLoaderSimple", "_meta": {"title": "Load LTX-Video"},
-        "inputs": {"ckpt_name": "ltx-video-2b-v0.9.5.safetensors"}},
-  "2": {"class_type": "CLIPLoader", "_meta": {"title": "Load T5 for LTX"},
-        "inputs": {"clip_name": "t5xxl_fp16.safetensors", "type": "ltxv"}},
-  "3": {"class_type": "LoadImage", "_meta": {"title": "IN_IMAGE"},
-        "inputs": {"image": "example.png"}},
-  "4": {"class_type": "CLIPTextEncode", "_meta": {"title": "IN_PROMPT"},
-        "inputs": {"clip": ["2", 0], "text": "Anime hunter stands facing the camera on a dark city street at night. Behind them a vertical rift of blue and violet light tears open into a glowing Gate, crackling energy and swirling sparks, wind whipping their coat and hair. They glance back, then turn and step through the Gate into the light. Slow cinematic push-in, dramatic rim light, anime style, smooth motion."}},
-  "5": {"class_type": "CLIPTextEncode", "_meta": {"title": "Negative"},
-        "inputs": {"clip": ["2", 0], "text": "low quality, worst quality, deformed face, distorted, blurry, jittery, watermark, text"}},
-  "6": {"class_type": "LTXVImgToVideo", "_meta": {"title": "Image to video"},
-        "inputs": {"positive": ["4", 0], "negative": ["5", 0], "vae": ["1", 2], "image": ["3", 0],
-                   "width": 512, "height": 768, "length": 97, "batch_size": 1, "strength": 1.0}},
-  "7": {"class_type": "LTXVConditioning", "_meta": {"title": "Frame rate"},
-        "inputs": {"positive": ["6", 0], "negative": ["6", 1], "frame_rate": 24}},
-  "8": {"class_type": "LTXVScheduler", "_meta": {"title": "Scheduler"},
-        "inputs": {"latent": ["6", 2], "steps": 30, "max_shift": 2.05, "base_shift": 0.95, "stretch": true, "terminal": 0.1}},
-  "9": {"class_type": "KSamplerSelect", "_meta": {"title": "Sampler"},
-        "inputs": {"sampler_name": "euler"}},
-  "10": {"class_type": "RandomNoise", "_meta": {"title": "IN_SEED"},
-         "inputs": {"noise_seed": 42}},
-  "11": {"class_type": "CFGGuider", "_meta": {"title": "Guider"},
-         "inputs": {"model": ["1", 0], "positive": ["7", 0], "negative": ["7", 1], "cfg": 3.0}},
-  "12": {"class_type": "SamplerCustomAdvanced", "_meta": {"title": "Sample"},
-         "inputs": {"noise": ["10", 0], "guider": ["11", 0], "sampler": ["9", 0], "sigmas": ["8", 0], "latent_image": ["6", 2]}},
-  "13": {"class_type": "VAEDecode", "_meta": {"title": "Decode"},
-         "inputs": {"samples": ["12", 0], "vae": ["1", 2]}},
-  "14": {"class_type": "SaveAnimatedWEBP", "_meta": {"title": "OUT"},
-         "inputs": {"images": ["13", 0], "filename_prefix": "gaterun/gate", "fps": 24, "lossless": false, "quality": 85, "method": "default"}}
+ "1": {
+  "class_type": "CheckpointLoaderSimple",
+  "_meta": {
+   "title": "Load LTX-Video"
+  },
+  "inputs": {
+   "ckpt_name": "ltx-video-2b-v0.9.5.safetensors"
+  }
+ },
+ "2": {
+  "class_type": "CLIPLoader",
+  "_meta": {
+   "title": "Load T5 for LTX"
+  },
+  "inputs": {
+   "clip_name": "t5xxl_fp16.safetensors",
+   "type": "ltxv"
+  }
+ },
+ "3": {
+  "class_type": "LoadImage",
+  "_meta": {
+   "title": "IN_IMAGE"
+  },
+  "inputs": {
+   "image": "example.png"
+  }
+ },
+ "4": {
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "IN_PROMPT"
+  },
+  "inputs": {
+   "clip": [
+    "2",
+    0
+   ],
+   "text": "Gatecrasher stands facing the camera on a dark city street at night. Behind them a vertical rift of blue and violet light tears open into a glowing Gate, crackling energy and swirling sparks, wind whipping their coat and hair. They glance back, then turn and step through the Gate into the light. Slow cinematic push-in, dramatic rim light, anime style, smooth motion."
+  }
+ },
+ "5": {
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "Negative"
+  },
+  "inputs": {
+   "clip": [
+    "2",
+    0
+   ],
+   "text": "low quality, worst quality, deformed face, distorted, blurry, jittery, watermark, text"
+  }
+ },
+ "6": {
+  "class_type": "LTXVImgToVideo",
+  "_meta": {
+   "title": "Image to video"
+  },
+  "inputs": {
+   "positive": [
+    "4",
+    0
+   ],
+   "negative": [
+    "5",
+    0
+   ],
+   "vae": [
+    "1",
+    2
+   ],
+   "image": [
+    "3",
+    0
+   ],
+   "width": 512,
+   "height": 768,
+   "length": 97,
+   "batch_size": 1,
+   "strength": 1.0
+  }
+ },
+ "7": {
+  "class_type": "LTXVConditioning",
+  "_meta": {
+   "title": "Frame rate"
+  },
+  "inputs": {
+   "positive": [
+    "6",
+    0
+   ],
+   "negative": [
+    "6",
+    1
+   ],
+   "frame_rate": 24
+  }
+ },
+ "8": {
+  "class_type": "LTXVScheduler",
+  "_meta": {
+   "title": "Scheduler"
+  },
+  "inputs": {
+   "latent": [
+    "6",
+    2
+   ],
+   "steps": 30,
+   "max_shift": 2.05,
+   "base_shift": 0.95,
+   "stretch": true,
+   "terminal": 0.1
+  }
+ },
+ "9": {
+  "class_type": "KSamplerSelect",
+  "_meta": {
+   "title": "Sampler"
+  },
+  "inputs": {
+   "sampler_name": "euler"
+  }
+ },
+ "10": {
+  "class_type": "RandomNoise",
+  "_meta": {
+   "title": "IN_SEED"
+  },
+  "inputs": {
+   "noise_seed": 42
+  }
+ },
+ "11": {
+  "class_type": "CFGGuider",
+  "_meta": {
+   "title": "Guider"
+  },
+  "inputs": {
+   "model": [
+    "1",
+    0
+   ],
+   "positive": [
+    "7",
+    0
+   ],
+   "negative": [
+    "7",
+    1
+   ],
+   "cfg": 3.0
+  }
+ },
+ "12": {
+  "class_type": "SamplerCustomAdvanced",
+  "_meta": {
+   "title": "Sample"
+  },
+  "inputs": {
+   "noise": [
+    "10",
+    0
+   ],
+   "guider": [
+    "11",
+    0
+   ],
+   "sampler": [
+    "9",
+    0
+   ],
+   "sigmas": [
+    "8",
+    0
+   ],
+   "latent_image": [
+    "6",
+    2
+   ]
+  }
+ },
+ "13": {
+  "class_type": "VAEDecode",
+  "_meta": {
+   "title": "Decode"
+  },
+  "inputs": {
+   "samples": [
+    "12",
+    0
+   ],
+   "vae": [
+    "1",
+    2
+   ]
+  }
+ },
+ "14": {
+  "class_type": "SaveAnimatedWEBP",
+  "_meta": {
+   "title": "OUT"
+  },
+  "inputs": {
+   "images": [
+    "13",
+    0
+   ],
+   "filename_prefix": "gaterun/gate",
+   "fps": 24,
+   "lossless": false,
+   "quality": 85,
+   "method": "default"
+  }
+ }
 }
