@@ -96,6 +96,7 @@ a{color:var(--gate2)}
     <input type="file" id="fileIn" accept="image/*" capture="user" hidden>
     <button class="btn" id="bSelfie">Take or upload a selfie</button>
     <button class="btn ghost" id="bGuest">Play as a guest Crasher</button>
+    <button class="btn ghost" id="bDuel">⚔ 1v1 a friend online</button>
     <div class="pill"><span class="dot" id="cDot"></span><span id="cTxt">Checking for ComfyUI…</span></div>
     <div class="tiny" id="keyRow"><a href="#" id="keyLink">Use my own Comfy key</a> <span id="tierTxt"></span></div>
     <div id="keyBox" style="display:none;margin-top:8px"><input type="text" id="keyIn" placeholder="comfyui-…" autocomplete="off" spellcheck="false">
@@ -135,6 +136,26 @@ a{color:var(--gate2)}
   </div>
 </section>
 
+<section class="screen" id="sDuel">
+  <div class="card">
+    <div class="kicker">Online 1v1</div>
+    <h2 id="duelTitle">Challenge a friend</h2>
+    <p id="duelSub">Send this link. When they open it, you fight live, Crasher vs Crasher.</p>
+    <div id="duelLinkRow"><input type="text" id="duelLink" readonly><div class="row"><button class="btn" id="duelShare">Share link</button><button class="btn ghost" id="duelCopy">Copy</button></div></div>
+    <button class="btn" id="duelAccept" style="display:none">Accept the challenge</button>
+    <div class="pill"><span class="dot ok"></span><span id="duelStatus">…</span></div>
+    <button class="btn ghost" id="duelBack">Back</button>
+  </div>
+</section>
+<section class="screen" id="sDuelRes">
+  <div class="card">
+    <div class="kicker">1v1 result</div>
+    <h2 id="duelResTitle"></h2>
+    <img id="duelResImg" alt="1v1 result card" style="width:100%;max-height:48vh;object-fit:contain;border-radius:12px;display:block;margin:6px 0">
+    <button class="btn" id="duelResShare">Share the result</button>
+    <div class="row"><button class="btn ghost" id="duelRematch">Rematch</button><button class="btn ghost" id="duelExit">Leave</button></div>
+  </div>
+</section>
 <div id="clipLayer"><button class="btn ghost" id="skip">Skip</button></div>
 <button id="atkBtn" class="tbtn">ATK</button><button id="dashBtn" class="tbtn">DASH</button><button id="spBtn" class="tbtn">SP</button>
 <div id="toast"></div>
@@ -586,7 +607,7 @@ function sysMsg(m) { if (S) { S.msg = m; S.msgT = 2.6; } }
 const keys = {};
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase(); if (e.repeat) return; keys[k] = true;
-  if (mode !== 'play') return;
+  if (mode !== 'play' && mode !== 'duel') return;
   if (k === ' ' || k === 'k' || k === 'shift') { e.preventDefault(); tryDash(); }
   else if (k === 'j' || k === 'enter') tryAttack();
   else if (k === 'l' || k === 'e') trySpecial();
@@ -594,7 +615,7 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 let joy = null;
 cv.addEventListener('pointerdown', e => {
-  if (mode !== 'play') return;
+  if (mode !== 'play' && mode !== 'duel') return;
   if (e.pointerType === 'mouse') { if (e.button === 2) trySpecial(); else tryAttack(); return; }   // mouse: click attacks, WASD moves
   if (!joy) joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY };
 });
@@ -641,12 +662,14 @@ function startAttack(step) {
   AK.play('slash', step === 3 ? .7 : .45, step === 3 ? .8 : rand(.95, 1.15));
 }
 function tryAttack() {
+  if (mode === 'duel') return Duel.press('atk');
   if (!P || mode !== 'play') return;
   if (P.state === 'free') startAttack(P.comboT > 0 && P.step < 3 ? P.step + 1 : 1);
   else if (P.state === 'atk') P.buf = true;
   else if (P.state === 'dash' && P.st > .06) startAttack(3);          // dash-cancel into the heavy finisher
 }
 function tryDash() {
+  if (mode === 'duel') return Duel.press('dash');
   if (!P || P.dashCD > 0 || mode !== 'play' || P.state === 'sp') return;
   let dx = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0), dy = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
   if (joy) { dx = joy.x - joy.ox; dy = joy.y - joy.oy; }
@@ -656,6 +679,7 @@ function tryDash() {
   AK.play('dash', .6); burst(P.x, P.y, '#38d6ff', 16, 180);
 }
 function trySpecial() {
+  if (mode === 'duel') return Duel.press('sp');
   if (!P || mode !== 'play' || P.sp < 100 || P.state === 'sp') return;
   Object.assign(P, { state: 'sp', st: 0, sp: 0, hitDone: false }); P.inv = 1.4;
   S.cine = { t: 0, dur: 1.5, slow: .75, title: 'GATE SLASH', sub: hunterName.toUpperCase() };
@@ -752,6 +776,7 @@ function update(rawDt) {
   for (const t of texts) { t.y -= 40 * dt; t.life -= dt; } texts = texts.filter(t => t.life > 0);
   for (const s of slashes) { if (s.delay > 0) s.delay -= dt; else s.life -= dt; } slashes = slashes.filter(s => s.life > 0);
   if (S) { S.msgT -= dt; S.shake *= .86; }
+  if (mode === 'duel') { if (S.cine) { S.cine.t += dt; if (S.cine.t > S.cine.dur) S.cine = null; } if (S.flash > 0) S.flash -= dt * 2.5; Duel.update(dt); return; }
 
   if (mode === 'intro') { if (T > 2.4) startPlay(); return; }
   if (mode !== 'play') return;
@@ -995,7 +1020,7 @@ function drawHUD() {
   g.textAlign = 'left';
 }
 function drawCine() {
-  if (!S || mode !== 'play') return;
+  if (!S || (mode !== 'play' && mode !== 'duel')) return;
   if (S.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + clamp(S.flash, 0, 1) + ')'; g.fillRect(0, 0, W, H); }
   const c = S.cine; if (!c) return;
   const k = clamp(Math.min(c.t / .35, (c.dur - c.t) / .4), 0, 1), e = 1 - Math.pow(1 - k, 3), bar = H * .11 * e;
@@ -1021,7 +1046,7 @@ function draw3D() {
   g.clearRect(0, 0, W, H);
   if (mode === 'intro' && T > 1.95) { g.fillStyle = 'rgba(255,255,255,' + clamp(1 - (T - 1.95) / .45, 0, 1) + ')'; g.fillRect(0, 0, W, H); }
   if (mode === 'play' || (mode === 'intro' && T > 2)) {
-    for (const e of enemies) if (e.type !== 'imp') {
+    for (const e of enemies) if (e.type !== 'imp' && e.type !== 'rival') {
       const p = screenPos(e.x, e.y, e.r / R3.K * 2.5), w = e.type === 'boss' ? 96 : 44;
       g.fillStyle = 'rgba(43,37,80,.9)'; g.fillRect(p.x - w / 2, p.y, w, 5);
       g.fillStyle = e.type === 'boss' ? '#ffd84a' : '#ff4d6d'; g.fillRect(p.x - w / 2, p.y, w * clamp(e.hp / e.maxhp, 0, 1), 5);
@@ -1078,6 +1103,10 @@ function drawOverlay() {
     drawHUD();
     if (joy && !joy.mouse) { g.strokeStyle = 'rgba(56,214,255,.35)'; g.lineWidth = 2; g.beginPath(); g.arc(joy.ox, joy.oy, 50, 0, 6.283); g.stroke(); const jx = joy.x - joy.ox, jy = joy.y - joy.oy, m = Math.min(50, Math.hypot(jx, jy)), a = Math.atan2(jy, jx); g.fillStyle = 'rgba(56,214,255,.45)'; g.beginPath(); g.arc(joy.ox + Math.cos(a) * m, joy.oy + Math.sin(a) * m, 20, 0, 6.283); g.fill(); }
     if (S.elapsed < 7) { g.fillStyle = 'rgba(238,240,255,.75)'; g.font = '500 14px Inter'; g.textAlign = 'center'; (isTouch ? ['Drag the left side to move', 'ATK ×3 = combo · DASH dodges · SP when full'] : ['WASD move · J / click = slash (3-hit combo) · SPACE dash · L special']).forEach((ln, i, arr) => g.fillText(ln, W / 2, (isTouch ? H - 190 : H - 28) - (arr.length - 1 - i) * 20)); g.textAlign = 'left'; }
+  }
+  if (mode === 'duel') {
+    Duel.hud();
+    if (joy && !joy.mouse) { g.strokeStyle = 'rgba(56,214,255,.35)'; g.lineWidth = 2; g.beginPath(); g.arc(joy.ox, joy.oy, 50, 0, 6.283); g.stroke(); const jx = joy.x - joy.ox, jy = joy.y - joy.oy, m = Math.min(50, Math.hypot(jx, jy)), a = Math.atan2(jy, jx); g.fillStyle = 'rgba(56,214,255,.45)'; g.beginPath(); g.arc(joy.ox + Math.cos(a) * m, joy.oy + Math.sin(a) * m, 20, 0, 6.283); g.fill(); }
   }
   drawCine();
   drawSysMsg();
@@ -1211,9 +1240,23 @@ $('#bNew').onclick = () => { mode = 'menu'; show('sStart'); };
 $('#keyLink').onclick = e => { e.preventDefault(); const b = $('#keyBox'); b.style.display = b.style.display === 'none' ? 'block' : 'none'; $('#keyIn').value = userKey(); };
 $('#keySave').onclick = () => { const k = $('#keyIn').value.trim(); if (!/^comfyui-/.test(k)) return toast('That does not look like a Comfy key (comfyui-…)'); try { localStorage.setItem('comfyKey', k); } catch (e) {} $('#keyBox').style.display = 'none'; toast('Key saved in this browser'); detectComfy(); };
 $('#keyClear').onclick = () => { try { localStorage.removeItem('comfyKey'); } catch (e) {} $('#keyIn').value = ''; toast('Key removed'); detectComfy(); };
+$('#bDuel').onclick = () => { hunterName = $('#nameIn').value.trim() || hunterName || 'Crasher'; if (!portrait) portrait = guestPortrait || guestAvatar(); AK.init(); Duel.host(); };
+$('#duelCopy').onclick = async () => { try { await navigator.clipboard.writeText($('#duelLink').value); toast('Link copied'); } catch (e) { $('#duelLink').select(); } };
+$('#duelShare').onclick = async () => { const url = $('#duelLink').value, text = hunterName + ' challenged you to a Gate Run 1v1. Think you can take me?';
+  if (navigator.share) { try { await navigator.share({ title: 'Gate Run 1v1', text, url }); } catch (e) {} } else { try { await navigator.clipboard.writeText(text + ' ' + url); toast('Invite copied'); } catch (e) {} } };
+$('#duelBack').onclick = () => Duel.exit();
+$('#duelResShare').onclick = () => Duel.share();
+$('#duelRematch').onclick = () => Duel.reset();
+$('#duelExit').onclick = () => Duel.exit();
+{ const duelId = new URLSearchParams(location.search).get('duel');
+  if (duelId) { show('sDuel'); $('#duelTitle').textContent = 'You have been challenged'; $('#duelSub').textContent = 'A Crasher is waiting in their arena. Enter your name and step in.';
+    $('#duelLinkRow').innerHTML = '<input type="text" id="duelName" maxlength="16" placeholder="Your name" autocomplete="off">'; $('#duelAccept').style.display = ''; $('#duelStatus').textContent = 'Ready when you are';
+    $('#duelAccept').onclick = () => { hunterName = ($('#duelName').value || '').trim() || 'Challenger'; if (!portrait) portrait = guestPortrait || guestAvatar(); AK.init(); $('#duelAccept').style.display = 'none'; Duel.join(duelId); }; } }
 detectComfy();
 </script>
 <script src="director.js"></script>
+<script src="vendor/peerjs.min.js"></script>
+<script src="duel.js"></script>
 <script type="module" src="world3d.js"></script>
 </body>
 </html>

@@ -240,6 +240,10 @@ if (renderer) {
     SPR.defaultHunter = SPR.chars.hunter; SPR.ready = true;
     if (window.personalSprites) window.setHunterSprites(window.personalSprites);
   }).catch(e => console.warn('no sprites, using 3D stand-ins', e));
+  window.setRivalSprites = set => {
+    SPR.chars.rival = set ? { anchor: set.anchor, anims: Object.fromEntries(Object.entries(set.anims).map(([a, A]) => [a, { ...A, tex: prepTex(new THREE.CanvasTexture(A.canvas)) }])) } : null;
+    for (const a of actors.values()) if (a.char === 'rival') a.clones = {};
+  };
   window.resetHunterSprites = () => { if (SPR.defaultHunter) { SPR.chars.hunter = SPR.defaultHunter; if (heroActor) heroActor.clones = {}; } };
   // the player's own hunter, baked in the browser from their LTX moves (index.html: bakeHunterSprites)
   window.setHunterSprites = set => {
@@ -247,7 +251,7 @@ if (renderer) {
     for (const a of actors.values()) if (a.char === 'hunter') a.clones = {};
     if (heroActor) heroActor.clones = {};
   };
-  const HEIGHT = { hunter: 2.3, imp: 1.35, brute: 2.7, boss: 4.4 };
+  const HEIGHT = { hunter: 2.3, rival: 2.3, imp: 1.35, brute: 2.7, boss: 4.4 };
   const quad = new THREE.PlaneGeometry(1, 1);
   function makeActor(char, aura) {
     const g = new THREE.Group();
@@ -260,13 +264,13 @@ if (renderer) {
     return { g, body, glow, shadow, char, clones: {}, dead: 0 };
   }
   function pickAnim(char, want) {
-    const A = SPR.chars[char] && SPR.chars[char].anims;
+    const src = char === 'rival' && !SPR.chars.rival ? SPR.defaultHunter : SPR.chars[char], A = src && src.anims;
     if (!A) return null;
     return A[want] || A[{ run: 'idle', combo: 'idle', dash: 'run', special: 'combo', move: 'idle', idle: 'move', attack: 'move' }[want]] || Object.values(A)[0];
   }
   // anim: { name, p } (0..1 progress) or { name, t } (seconds, loops)
   function poseActor(a, anim, face, x, z, y = 0) {
-    const C = SPR.chars[a.char], A = pickAnim(a.char, anim.name);
+    const C = SPR.chars[a.char] || (a.char === 'rival' && SPR.defaultHunter), A = pickAnim(a.char, anim.name);
     if (!C || !A) return false;
     const n = A.n, i = anim.p !== undefined ? Math.min(n - 1, Math.floor(anim.p * n)) : (A.loop ? Math.floor(anim.t * SPR.fps) % n : Math.min(n - 1, Math.floor(anim.t * SPR.fps)));
     let tex = a.clones[A.img]; if (!tex) { tex = a.clones[A.img] = A.tex.clone(); tex.needsUpdate = true; }
@@ -314,6 +318,11 @@ if (renderer) {
     } else if (play && c && P) {                          // boss defeated: push in on the hunter
       const px = wx(P.x), pz = wz(P.y);
       camT.set(px, 1.2, pz); camP.set(px + 2.5, 3.2 + c.t, pz + 5.5 + c.t);
+    } else if (play && mode === 'duel' && enemies[0]) {   // 1v1: frame both fighters, pull back as they separate
+      const ax = wx(P.x), az = wz(P.y), bx = wx(enemies[0].x), bz = wz(enemies[0].y);
+      const sep = Math.hypot(ax - bx, (az - bz) * 1.3), Dd = Math.max(D * .8, sep * 1.05 / Math.max(.5, camera.aspect) * .62 + 5.5);
+      camT.set((ax + bx) / 2, .9, (az + bz) / 2);
+      camP.set(camT.x, Dd * .5, camT.z + Dd * 1.05);
     } else if (play) {
       const px = wx(P.x), pz = wz(P.y);
       camT.set(px * .8, .9, pz * .8);
@@ -335,7 +344,7 @@ if (renderer) {
   function render() {
     const dt = Math.max(0, Math.min(.05, T - lastT));
     syncFace();
-    const play = mode === 'play' || mode === 'intro';
+    const play = mode === 'play' || mode === 'intro' || mode === 'duel';
     const gp = gatePos(), menu = !play;
     const open = mode === 'intro' ? Math.min(1, T / 1.1) : 1;
     const s = (menu ? 1.5 : 1) * gateScale() * open;
@@ -363,7 +372,7 @@ if (renderer) {
     }
 
     // hero
-    const heroShown = !!P && (mode === 'play' || (mode === 'intro' && T > 2));
+    const heroShown = !!P && (mode === 'play' || mode === 'duel' || (mode === 'intro' && T > 2));
     hero.visible = heroShown;
     if (P && SPR.ready && SPR.chars.hunter) {     // HD-2D: the LTX-animated hunter sprite
       hero.visible = false;
@@ -400,9 +409,9 @@ if (renderer) {
     // enemies
     seen.clear();
     for (const e of (play ? enemies : [])) {
-      if (SPR.ready && SPR.chars[e.type]) {     // HD-2D sprite enemy
+      if (SPR.ready && (SPR.chars[e.type] || e.type === 'rival')) {     // HD-2D sprite enemy (or the 1v1 rival)
         let a = actors.get(e);
-        if (!a) { a = makeActor(e.type, e.type === 'boss' ? VIOLET : e.type === 'brute' ? 0x6a2aff : null); a.born = T; actors.set(e, a); if (e.type === 'boss') shock.push({ x: wx(e.x), z: wz(e.y), t: 0 }); }
+        if (!a) { a = makeActor(e.type, e.type === 'boss' ? VIOLET : e.type === 'brute' ? 0x6a2aff : e.type === 'rival' ? RED : null); a.born = T; actors.set(e, a); if (e.type === 'boss') shock.push({ x: wx(e.x), z: wz(e.y), t: 0 }); }
         seen.add(e);
         poseActor(a, e.anim || { name: e.type === 'boss' ? 'idle' : 'move', t: T + e.wob }, e.face || (P && P.x < e.x ? -1 : 1), wx(e.x), wz(e.y), (e.z || 0) / K);
         a.g.scale.setScalar(Math.min(1, (T - a.born) / .35));
@@ -476,7 +485,7 @@ if (renderer) {
       if (sl.face === undefined) { m.position.set(wx(sl.x), .55, wz(sl.y)); m.rotation.y = -sl.ang - (1 - k) * .4; m.scale.setScalar(.85 + (1 - k) * .3); }
       else {
         const sc = sl.big ? 3.2 : sl.step === 3 ? 1.2 : .85;
-        const fx = sl.big || !P ? sl.x : P.x, fy = sl.big || !P ? sl.y : P.y;   // swings travel with the lunge
+        const own = sl.owner || P, fx = sl.big || !own ? sl.x : own.x, fy = sl.big || !own ? sl.y : own.y;   // swings travel with the lunge
         m.position.set(wx(fx) + sl.face * .45, .95, wz(fy) + .05);
         m.rotation.y = Math.atan2(camera.position.x - m.position.x, camera.position.z - m.position.z);
         m.scale.set(sl.face * sc * (.85 + (1 - k) * .35), sc * (.85 + (1 - k) * .35), 1);
