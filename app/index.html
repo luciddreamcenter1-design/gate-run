@@ -79,6 +79,7 @@ input[type=text]{width:100%;background:#0c0a18;border:1px solid var(--line);colo
 #atkBtn{right:20px;bottom:calc(22px + env(safe-area-inset-bottom));width:96px;height:96px;font-size:16px;background:rgba(56,214,255,.2)}
 #dashBtn{right:128px;bottom:calc(20px + env(safe-area-inset-bottom));width:70px;height:70px}
 #spBtn{right:34px;bottom:calc(132px + env(safe-area-inset-bottom));width:70px;height:70px;border-color:#b18cff;background:rgba(177,140,255,.14)}
+#pauseBtn{position:fixed;right:12px;top:calc(80px + env(safe-area-inset-top));width:44px;height:44px;border-radius:12px;border:1px solid #2b2550;background:rgba(16,13,30,.8);color:var(--ink);font:700 15px "Chakra Petch";letter-spacing:.1em;z-index:6;display:none;touch-action:none;cursor:pointer}
 #spBtn.ready{box-shadow:0 0 24px #b18cff;background:rgba(177,140,255,.4)}
 #toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:10px 14px;border-radius:10px;font-size:13px;z-index:20;display:none;max-width:calc(100% - 32px)}
 select{background:#0c0a18;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:0 10px;font:600 16px Inter,sans-serif;min-height:44px}
@@ -193,7 +194,7 @@ a{color:var(--gate2)}
   </div>
 </section>
 <div id="clipLayer"><button class="btn ghost" id="skip">Skip</button></div>
-<button id="atkBtn" class="tbtn">ATK</button><button id="dashBtn" class="tbtn">DASH</button><button id="spBtn" class="tbtn">SP</button>
+<button id="atkBtn" class="tbtn">ATK</button><button id="dashBtn" class="tbtn">DASH</button><button id="spBtn" class="tbtn">SP</button><button id="pauseBtn" aria-label="Pause">II</button>
 <div id="toast"></div>
 
 <script>
@@ -719,7 +720,7 @@ function beginIntro() {
   AK.play('gate_open', .8); AK.music(.32);
   setTimeout(() => showIntroCard(fighter(), personalSprites ? portrait : (rosterArt[rosterPick] || portrait)), 350);
 }
-function startPlay() { mode = 'play'; document.querySelectorAll('.tbtn').forEach(b => b.style.display = isTouch ? 'block' : 'none'); GameRec.start(7, 'opener'); }
+function startPlay() { mode = 'play'; document.querySelectorAll('.tbtn').forEach(b => b.style.display = isTouch ? 'block' : 'none'); $('#pauseBtn').style.display = 'block'; GameRec.start(7, 'opener'); }
 function sysMsg(m) { if (S) { S.msg = m; S.msgT = 2.6; } }
 
 /* ---------- input ---------- */
@@ -757,6 +758,7 @@ const tap = f => e => { e.stopPropagation(); if (paused) setPaused(false); else 
 $('#dashBtn').addEventListener('pointerdown', tap(tryDash));
 $('#atkBtn').addEventListener('pointerdown', tap(tryAttack));
 $('#spBtn').addEventListener('pointerdown', tap(trySpecial));
+$('#pauseBtn').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); setPaused(!paused); });
 // iOS Safari ignores user-scalable=no: one thumb moving + one on ATK reads as a pinch, and fast taps as a double-tap zoom.
 // Block pinches only mid-fight (so a zoomed menu can always be pinched back), and snap any zoom back to 100% when not typing.
 const fighting = () => mode === 'play' || mode === 'duel';
@@ -1274,7 +1276,7 @@ function drawOverlay() {
   if (mode === 'play' && !(S && S.cine)) {
     drawHUD();
     if (joy && !joy.mouse) { g.strokeStyle = 'rgba(56,214,255,.35)'; g.lineWidth = 2; g.beginPath(); g.arc(joy.ox, joy.oy, 50, 0, 6.283); g.stroke(); const jx = joy.x - joy.ox, jy = joy.y - joy.oy, m = Math.min(50, Math.hypot(jx, jy)), a = Math.atan2(jy, jx); g.fillStyle = 'rgba(56,214,255,.45)'; g.beginPath(); g.arc(joy.ox + Math.cos(a) * m, joy.oy + Math.sin(a) * m, 20, 0, 6.283); g.fill(); }
-    if (S.elapsed < 7) { g.fillStyle = 'rgba(238,240,255,.75)'; g.font = '500 14px Inter'; g.textAlign = 'center'; (isTouch ? ['Drag the left side to move', 'ATK ×3 = combo · DASH dodges · SP when full'] : ['WASD move · J / click = slash (3-hit combo) · SPACE dash · L special']).forEach((ln, i, arr) => g.fillText(ln, W / 2, (isTouch ? H - 190 : H - 28) - (arr.length - 1 - i) * 20)); g.textAlign = 'left'; }
+    if (S.elapsed < 7) { g.fillStyle = 'rgba(238,240,255,.75)'; g.font = '500 14px Inter'; g.textAlign = 'center'; (isTouch ? ['Drag the left side to move', 'ATK ×3 = combo · DASH dodges · SP when full'] : ['WASD move · J / click = slash (3-hit combo) · SPACE dash · L special · ESC pause']).forEach((ln, i, arr) => g.fillText(ln, W / 2, (isTouch ? H - 190 : H - 28) - (arr.length - 1 - i) * 20)); g.textAlign = 'left'; }
   }
   if (mode === 'duel') {
     Duel.hud();
@@ -1285,9 +1287,29 @@ function drawOverlay() {
   drawIntroCard(1 / 60);
   if (paused) {
     g.fillStyle = 'rgba(8,5,18,.82)'; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#eef0ff'; g.textAlign = 'center'; g.font = '700 34px Inter'; g.fillText('PAUSED', W / 2, H / 2 - 10);
-    g.font = '500 16px Inter'; g.fillStyle = 'rgba(238,240,255,.75)'; g.fillText(isTouch ? 'Tap to resume' : 'Click or press any key to resume', W / 2, H / 2 + 24); g.textAlign = 'left';
+    drawLegend();
   }
+}
+
+const LEGEND = {
+  touch: [['Move', 'Drag the left side'], ['ATK', 'Slash · tap 3× for a combo'], ['DASH', 'Dodge through attacks'], ['SP', 'Special when the bar is full'], ['II', 'Pause']],
+  keys: [['Move', 'WASD / arrow keys'], ['Slash', 'J / Enter / left click · 3× combo'], ['Dash', 'Space / K / Shift'], ['Special', 'L / E / right click (bar full)'], ['Pause', 'Esc / P / II button']],
+  tips: ['Dash just before a hit: PERFECT, slow-mo + crit', 'Fill a big enemy’s cyan bar: BREAK, stun + 50% dmg'],
+};
+function drawLegend() {
+  const rows = isTouch ? LEGEND.touch : LEGEND.keys, lh = 26, w = Math.min(W - 32, 380), x = (W - w) / 2, h = 78 + rows.length * lh + 18 + LEGEND.tips.length * 20 + 40;
+  let y = Math.max(16, (H - h) / 2);
+  g.textAlign = 'center'; g.fillStyle = '#eef0ff'; g.font = '700 30px "Chakra Petch"'; g.fillText('PAUSED', W / 2, y + 30);
+  g.font = '600 12px "Chakra Petch"'; g.fillStyle = '#9a9cc4'; g.fillText('CONTROLS', W / 2, y + 58);
+  y += 78;
+  for (const [k, v] of rows) {
+    g.textAlign = 'right'; g.font = '700 14px "Chakra Petch"'; g.fillStyle = '#38d6ff'; g.fillText(k, x + w * .3, y + 4);
+    g.textAlign = 'left'; g.font = '500 14px Inter'; g.fillStyle = '#eef0ff'; g.fillText(v, x + w * .3 + 14, y + 4, w * .7 - 14);
+    y += lh;
+  }
+  y += 18; g.textAlign = 'center'; g.font = '500 13px Inter'; g.fillStyle = '#ffd84a';
+  for (const t of LEGEND.tips) { g.fillText(t, W / 2, y, w); y += 20; }
+  g.font = '500 15px Inter'; g.fillStyle = 'rgba(238,240,255,.75)'; g.fillText(isTouch ? 'Tap to resume' : 'Click or press any key to resume', W / 2, y + 24); g.textAlign = 'left';
 }
 
 function loop(now) {
@@ -1359,7 +1381,7 @@ $('#hsBack').onclick = () => show('sStart');
 let licenseURL = null;
 async function finish(cleared) {
   if (mode !== 'play') return;
-  mode = 'end'; joy = null; document.querySelectorAll('.tbtn').forEach(b => b.style.display = 'none');
+  mode = 'end'; joy = null; document.querySelectorAll('.tbtn').forEach(b => b.style.display = 'none'); $('#pauseBtn').style.display = 'none';
   GameRec.stop(); S.cine = null; AK.musicOff(1.2);
   AK.play(cleared ? 'win' : 'lose', .9); setTimeout(() => AK.vo(cleared ? 'vo_cleared' : 'vo_fallen'), 400);
   await document.fonts.ready;
