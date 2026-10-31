@@ -211,7 +211,9 @@ const AK = {
   },
   musicOff(fade = .6) { this.wantMusic = 0; this.musicLevel = 0; if (this.musicGain) this.musicGain.gain.setTargetAtTime(0, this.ctx.currentTime, fade / 3); },
 };
-['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => { AK.init(); AK.ctx && AK.ctx.state === 'suspended' && AK.ctx.resume(); }, { passive: true }));
+// iOS only unlocks audio on a finished tap (touchend / pointerup / click), and mutes Web Audio on the silent switch unless the session is "playback"
+if (navigator.audioSession) try { navigator.audioSession.type = 'playback'; } catch (e) {}
+['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'].forEach(ev => addEventListener(ev, () => { AK.init(); AK.ctx && AK.ctx.state !== 'running' && AK.ctx.resume(); }, { passive: true, capture: true }));
 
 /* Records short gameplay segments (9:16 crop of the 3D world + HUD + game audio) for the Reel. */
 const GameRec = {
@@ -1349,7 +1351,7 @@ $('#duelExit').onclick = () => Duel.exit();
   if (duelId) { show('sDuel'); $('#duelTitle').textContent = 'You have been challenged'; $('#duelSub').textContent = 'A Crasher is waiting in their arena. Enter your name and step in.';
     $('#duelLinkRow').innerHTML = '<input type="text" id="duelName" maxlength="16" placeholder="Your name" autocomplete="off">'; $('#duelAccept').style.display = ''; $('#duelStatus').textContent = 'Ready when you are';
     $('#duelAccept').onclick = () => { const f = fighter(); hunterName = ($('#duelName').value || '').trim() || (personalSprites ? hunterName : f.name); if (!personalSprites) { portrait = rosterArt[f.id] || guestPortrait || guestAvatar(); window.useRosterHunter && window.useRosterHunter(f.id); } AK.init(); $('#duelAccept').style.display = 'none'; Duel.join(duelId); }; } }
-detectComfy();
+if (!window.GATE_NATIVE) detectComfy();   // the iOS app is the basic game: no Comfy pipeline
 </script>
 <script src="director.js"></script>
 <script src="vendor/peerjs.min.js"></script>

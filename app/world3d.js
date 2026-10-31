@@ -25,7 +25,7 @@ if (renderer) {
   document.body.prepend(canvas);
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.25 : 1.5));   // phones/tablets: lighter fill rate
   renderer.toneMapping = THREE.NeutralToneMapping;   // keeps the player's face colors true
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.2;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x07060d);
@@ -306,9 +306,14 @@ if (renderer) {
   function makeActor(char, aura) {
     const g = new THREE.Group();
     const mat = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: .3, side: THREE.DoubleSide, fog: false });
+    const monster = char === 'imp' || char === 'brute' || char === 'boss';
+    if (monster) {   // monster art is near-black: lift its shadows so it reads on dark floors and dim phone screens
+      mat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb = pow(diffuseColor.rgb, vec3(.6));'); };
+      mat.customProgramCacheKey = () => 'monster';
+    }
     const body = new THREE.Mesh(quad, mat); g.add(body);
     let glow = null;
-    if (aura) { glow = new THREE.Mesh(quad, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: hdr(aura, .9), opacity: .35, side: THREE.DoubleSide, fog: false })); glow.renderOrder = -1; g.add(glow); }
+    if (aura) { glow = new THREE.Mesh(quad, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: hdr(aura, .9), opacity: monster ? .8 : .35, side: THREE.DoubleSide, fog: false })); glow.renderOrder = -1; glow.userData.k = monster ? 1.12 : 1.05; g.add(glow); }
     const shadow = blob(1.6); g.add(shadow);
     scene.add(g);
     return { g, body, glow, shadow, char, clones: {}, dead: 0 };
@@ -331,7 +336,7 @@ if (renderer) {
     const an = C.anchor, ph = HEIGHT[a.char] / Math.max(.2, an.foot - an.top), pw = ph * SPR.frame[0] / SPR.frame[1];
     const ox = (.5 - an.cx) * pw * (face < 0 ? -1 : 1);
     a.body.scale.set(pw, ph, 1); a.body.position.set(ox, an.foot * ph - ph / 2, 0);   // frame foot line on the ground
-    if (a.glow) { a.glow.scale.set(pw * 1.07, ph * 1.04, 1); a.glow.position.set(ox, a.body.position.y + ph * .01, -.03); }
+    if (a.glow) { const k = a.glow.userData.k; a.glow.scale.set(pw * k, ph * (1 + (k - 1) * .6), 1); a.glow.position.set(ox, a.body.position.y + ph * .01, -.03); }
     a.shadow.scale.setScalar(HEIGHT[a.char] * .55);
     a.g.position.set(x, y, z);
     const cdx = camera.position.x - x, cdz = camera.position.z - z, lean = Math.max(0, Math.atan2(camera.position.y - y, Math.hypot(cdx, cdz)) - .3) * .7;
@@ -462,14 +467,14 @@ if (renderer) {
     for (const e of (play ? enemies : [])) {
       if (SPR.ready && (SPR.chars[e.type] || e.type === 'rival')) {     // HD-2D sprite enemy (or the 1v1 rival)
         let a = actors.get(e);
-        if (!a) { a = makeActor(e.type, e.type === 'boss' ? VIOLET : e.type === 'brute' ? 0x6a2aff : e.type === 'rival' ? RED : null); a.born = T; actors.set(e, a); if (e.type === 'boss') shock.push({ x: wx(e.x), z: wz(e.y), t: 0 }); }
+        if (!a) { a = makeActor(e.type, e.type === 'boss' ? VIOLET : e.type === 'brute' ? 0x6a2aff : RED); a.born = T; actors.set(e, a); if (e.type === 'boss') shock.push({ x: wx(e.x), z: wz(e.y), t: 0 }); }
         seen.add(e);
         poseActor(a, e.anim || { name: e.type === 'boss' ? 'idle' : 'move', t: T + e.wob }, e.face || (P && P.x < e.x ? -1 : 1), wx(e.x), wz(e.y), (e.z || 0) / K);
         a.g.scale.setScalar(Math.min(1, (T - a.born) / .35));
         const c = a.body.material.color;
         if (e.hit > 0) c.setScalar(2.4);
         else if (e.state === 'wind') { const k = .5 + .5 * Math.sin(T * 30); c.setRGB(1.6 + k, .55, .55); }
-        else c.setScalar(1.25);
+        else c.setScalar(1.6);
         continue;
       }
       let g = live.get(e); if (!g) { g = enemyMesh(e); live.set(e, g); }
