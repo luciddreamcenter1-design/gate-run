@@ -85,6 +85,8 @@ input[type=text]{width:100%;background:#0c0a18;border:1px solid var(--line);colo
 select{background:#0c0a18;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:0 10px;font:600 16px Inter,sans-serif;min-height:44px}
 .hs-list{list-style:none;padding:0;margin:12px 0 0;max-height:46vh;overflow-y:auto}
 .hs-list li{display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--line);font-size:14px}
+#hsTop3Box{margin:4px 0 14px}
+#hsTop3 li{padding:7px 6px}
 .hs-list li.me{background:rgba(56,214,255,.12);border-radius:8px}
 .hs-list .rk{width:26px;color:var(--muted);font:700 14px "Chakra Petch",sans-serif}
 .hs-list a{flex:1;min-width:0;color:var(--ink);text-decoration:none;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -104,6 +106,7 @@ a{color:var(--gate2)}
     <div class="kicker">Gatecrashers · Gate Run</div>
     <h1>Step through the Gate as yourself.</h1>
     <p>Upload a selfie. ComfyUI turns you into a Gatecrasher and directs your own anime trailer. Then the Gates open, one after another, each harder than the last. <b style="color:var(--ink)">How many can you crash?</b></p>
+    <div id="hsTop3Box" hidden><label class="field">Top Crashers</label><ol class="hs-list" id="hsTop3"></ol></div>
     <label class="field" for="nameIn">Crasher name</label>
     <input type="text" id="nameIn" maxlength="16" placeholder="Your name" autocomplete="off">
     <label class="field" style="margin-top:12px">Crasher</label>
@@ -1376,7 +1379,12 @@ $('#bScores').onclick = async () => {
   try { const { status, data } = await hsFetch(); if (status !== 200) throw 0; hsRender(list, data.top, hsMine()); m.textContent = data.top.length ? '' : 'No scores yet. Be the first.'; }
   catch (e) { m.textContent = 'High scores are offline right now.'; }
 };
-$('#hsBack').onclick = () => show('sStart');
+$('#hsBack').onclick = () => { show('sStart'); hsTop3(); };
+async function hsTop3() {   // stays hidden while the server wakes up, on errors, and when the board is empty
+  try { const { status, data } = await hsFetch(); if (status !== 200 || !data.top || !data.top.length) return;
+    hsRender($('#hsTop3'), data.top.slice(0, 3), hsMine()); $('#hsTop3Box').hidden = false; } catch (e) {}
+}
+hsTop3();
 
 let licenseURL = null;
 async function finish(cleared) {
@@ -1489,7 +1497,7 @@ async function shareLicense() {
 }
 $('#bShare').onclick = shareLicense;
 $('#bAgain').onclick = () => beginIntro();
-$('#bNew').onclick = () => { mode = 'menu'; show('sStart'); };
+$('#bNew').onclick = () => { mode = 'menu'; show('sStart'); hsTop3(); };
 
 $('#keyLink').onclick = e => { e.preventDefault(); const b = $('#keyBox'); b.style.display = b.style.display === 'none' ? 'block' : 'none'; $('#keyIn').value = userKey(); };
 $('#keySave').onclick = () => { const k = $('#keyIn').value.trim(); if (!/^comfyui-/.test(k)) return toast('That does not look like a Comfy key (comfyui-…)'); try { localStorage.setItem('comfyKey', k); } catch (e) {} $('#keyBox').style.display = 'none'; toast('Key saved in this browser'); detectComfy(); };
