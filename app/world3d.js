@@ -79,14 +79,14 @@ if (renderer) {
         if (uBack > .5) {   // the arena's own top-down ground texture (stone slabs if it has none), flowing into the projected painting at the back wall
           vec3 near = col;
           if (uHasGround > .5) {   // two rotated samples blended by noise so the tile never visibly repeats
-            vec3 g1 = texture2D(uGround, p / 5.).rgb, g2 = texture2D(uGround, mat2(.8, -.6, .6, .8) * p / 6.3 + .37).rgb;
+            vec3 g1 = texture2D(uGround, p / 8.).rgb, g2 = texture2D(uGround, mat2(.8, -.6, .6, .8) * p / 10.5 + .37).rgb;   // big tiles: the repeat stops reading as a grid
             near = pow(mix(g1, g2, smoothstep(.3, .7, n2(p * .18))), vec3(2.2)) * .85;
           }
           vec3 far = pow(texture2D(uMap, clamp(projUV(vW), .002, .998)).rgb, vec3(2.2)) * .9;
-          col = mix(near, far, smoothstep(-uArena.y + 2.5, -uArena.y + .3, p.y)) * (1. - .6 * smoothstep(0., .3, box));
+          col = mix(near, far, smoothstep(-uArena.y + 4., -uArena.y - .2, p.y)) * (1. - .55 * smoothstep(-.3, 2.5, box));   // wide blends: no seam at the back wall or the arena edge
         }
-        col += vec3(.30, .20, .95) * glow * .55;
-        col += vec3(.35, .28, 1.2) * glow * .5 * smoothstep(.55, 1., sin(dg * 1.7 - uTime * 3.2));
+        col += vec3(.30, .20, .95) * glow * .25;
+        col += vec3(.35, .28, 1.2) * glow * .2 * exp(-dg * .12) * smoothstep(.55, 1., sin(dg * 1.7 - uTime * 3.2));   // ripples stay near the Gate instead of ringing the whole floor
         col += vec3(.5, 2.1, 2.8) * border * .55 * (1. - uBack);   // the walls are the border once an arena is up
         float fade = exp(-length(p - cameraPosition.xz) * .022);
         gl_FragColor = vec4(col * fade, 1.);
@@ -150,7 +150,8 @@ if (renderer) {
   };
   window.setArena = ({ image, video, tint, ground }) => {
     const gu = groundMat.uniforms; gu.uHasGround.value = 0;
-    if (ground) new THREE.TextureLoader().load(ground, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; gu.uGround.value = t; gu.uHasGround.value = 1; });
+    if (ground) new THREE.TextureLoader().load(ground, t => { t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;   // the ground photos aren't seamless; mirroring hides the tile edges
+      t.anisotropy = 4; gu.uGround.value = t; gu.uHasGround.value = 1; });
     if (tint) { groundMat.uniforms.uTint.value.set(tint); scene.fog.color.set(tint).multiplyScalar(.22); scene.background.copy(scene.fog.color); }
     if (backVideo) { backVideo.pause(); backVideo.removeAttribute('src'); backVideo.load(); backVideo = null; }
     if (image) new THREE.TextureLoader().load(image, t => { if (!backVideo || !(backTex instanceof THREE.VideoTexture)) useBack(t); });
