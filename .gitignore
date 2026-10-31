@@ -2,3 +2,5 @@
 __pycache__/
 .DS_Store
 brag-output*/
+.venv/
+app/sprites/src/_old/

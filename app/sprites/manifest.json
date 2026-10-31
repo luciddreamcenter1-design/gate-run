@@ -7,16 +7,16 @@
  "chars": {
   "hunter": {
    "anchor": {
-    "top": 0.0764,
-    "foot": 0.9826,
-    "cx": 0.5156
+    "top": 0.0868,
+    "foot": 0.9722,
+    "cx": 0.5104
    },
    "anims": {
     "idle": {
      "img": "hunter_idle.png",
      "cols": 8,
      "rows": 2,
-     "n": 16,
+     "n": 15,
      "loop": true
     },
     "run": {
@@ -74,7 +74,7 @@
   },
   "brute": {
    "anchor": {
-    "top": 0.0382,
+    "top": 0.0868,
     "foot": 0.9722,
     "cx": 0.4948
    },
@@ -97,7 +97,7 @@
   },
   "boss": {
    "anchor": {
-    "top": 0.0,
+    "top": 0.0035,
     "foot": 0.9965,
     "cx": 0.4948
    },
@@ -113,15 +113,15 @@
      "img": "boss_attack.png",
      "cols": 8,
      "rows": 2,
-     "n": 15,
+     "n": 16,
      "loop": false
     }
    }
   },
   "kira": {
    "anchor": {
-    "top": 0.0486,
-    "foot": 0.9688,
+    "top": 0.0451,
+    "foot": 0.9722,
     "cx": 0.5156
    },
    "anims": {
@@ -165,15 +165,15 @@
   "brann": {
    "anchor": {
     "top": 0.0833,
-    "foot": 0.9549,
-    "cx": 0.4479
+    "foot": 0.9583,
+    "cx": 0.4531
    },
    "anims": {
     "idle": {
      "img": "brann_idle.png",
      "cols": 8,
-     "rows": 2,
-     "n": 16,
+     "rows": 4,
+     "n": 25,
      "loop": true
     },
     "run": {
@@ -201,7 +201,7 @@
      "img": "brann_special.png",
      "cols": 8,
      "rows": 2,
-     "n": 14,
+     "n": 13,
      "loop": false
     }
    }
@@ -209,8 +209,8 @@
   "vex": {
    "anchor": {
     "top": 0.1667,
-    "foot": 0.9271,
-    "cx": 0.4948
+    "foot": 0.9306,
+    "cx": 0.5
    },
    "anims": {
     "idle": {
@@ -224,7 +224,7 @@
      "img": "vex_run.png",
      "cols": 8,
      "rows": 2,
-     "n": 16,
+     "n": 11,
      "loop": true
     },
     "combo": {

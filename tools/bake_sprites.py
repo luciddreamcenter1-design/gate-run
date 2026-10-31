@@ -35,12 +35,16 @@ def duration(path):
     return float(out.strip())
 
 
-def keyed_chain(color):
-    return f"fps={FPS},scale={FW}:{FH}:flags=lanczos,colorkey={color}:0.30:0.10,despill=type=green:mix=0.7:expand=0.15,format=rgba"
+def keyed_chain(color, keyer="chromakey"):
+    # chromakey matches on chroma only: colorkey's RGB distance put black within reach of the green key, which left
+    # black armor (the boss) half transparent. Characters whose clip paints a black floor shadow on the green (the imp)
+    # set "keyer": "colorkey" in moveset.json, which drops that shadow.
+    key = f"colorkey={color}:0.30:0.10" if keyer == "colorkey" else f"chromakey={color}:0.12:0.06"
+    return f"fps={FPS},scale={FW}:{FH}:flags=lanczos,{key},despill=type=green:mix=0.7:expand=0.15,format=rgba"
 
 
-def frames(path, color):
-    raw = ff("-i", path, "-vf", keyed_chain(color), "-f", "rawvideo", "-pix_fmt", "rgba", "-")
+def frames(path, color, keyer="chromakey"):
+    raw = ff("-i", path, "-vf", keyed_chain(color, keyer), "-f", "rawvideo", "-pix_fmt", "rgba", "-")
     size = FW * FH * 4
     return [raw[i * size:(i + 1) * size] for i in range(len(raw) // size)]
 
@@ -83,12 +87,13 @@ def main():
             if not os.path.exists(src):
                 print("missing", src); continue
             color = key_color(src)
-            fr = frames(src, color)
+            keyer = spec.get("keyer", "chromakey")
+            fr = frames(src, color, keyer)
             a, b = motion_range(fr, bool(mv.get("loop")), mv.get("maxf", MAXF))
             n = b - a + 1
             rows = math.ceil(n / COLS)
             out = f"{char}_{move}.png"
-            ff("-i", src, "-vf", keyed_chain(color) + f",select='between(n\\,{a}\\,{b})',setpts=N/TB,tile={COLS}x{rows}:padding=0",
+            ff("-i", src, "-vf", keyed_chain(color, keyer) + f",select='between(n\\,{a}\\,{b})',setpts=N/TB,tile={COLS}x{rows}:padding=0",
                "-frames:v", "1", "-compression_level", "9", os.path.join(OUT, out))
             anims[move] = {"img": out, "cols": COLS, "rows": rows, "n": n, "loop": bool(mv.get("loop"))}
             if anchor is None or move in ("idle", "move"):
