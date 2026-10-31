@@ -689,9 +689,19 @@ function sysMsg(m) { if (S) { S.msg = m; S.msgT = 2.6; } }
 
 /* ---------- input ---------- */
 const keys = {};
+// pause: Esc / P, and automatically when the tab is hidden or the window loses focus; a tap or key resumes
+let paused = false;
+function setPaused(on) {
+  paused = on && fighting(); joy = null;
+  if (paused) { for (const k in keys) keys[k] = false; AK.ctx && AK.ctx.suspend(); } else AK.ctx && AK.ctx.resume();
+}
+addEventListener('blur', () => setPaused(true));
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase(); if (e.repeat) return; keys[k] = true;
   if (mode !== 'play' && mode !== 'duel') return;
+  if (k === 'escape' || k === 'p') { setPaused(!paused); return; }
+  if (paused) { setPaused(false); return; }
   if (k === ' ' || k === 'k' || k === 'shift') { e.preventDefault(); tryDash(); }
   else if (k === 'j' || k === 'enter') tryAttack();
   else if (k === 'l' || k === 'e') trySpecial();
@@ -700,6 +710,7 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 let joy = null;
 cv.addEventListener('pointerdown', e => {
   if (mode !== 'play' && mode !== 'duel') return;
+  if (paused) { setPaused(false); return; }
   if (e.pointerType === 'mouse') { if (e.button === 2) trySpecial(); else tryAttack(); return; }   // mouse: click attacks, WASD moves
   if (!joy) joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY };
 });
@@ -707,9 +718,10 @@ cv.addEventListener('pointermove', e => { if (joy && joy.id === e.pointerId) { j
 const endJoy = e => { if (joy && joy.id === e.pointerId) joy = null; };
 cv.addEventListener('pointerup', endJoy); cv.addEventListener('pointercancel', endJoy);
 cv.addEventListener('contextmenu', e => e.preventDefault());
-$('#dashBtn').addEventListener('pointerdown', e => { e.stopPropagation(); tryDash(); });
-$('#atkBtn').addEventListener('pointerdown', e => { e.stopPropagation(); tryAttack(); });
-$('#spBtn').addEventListener('pointerdown', e => { e.stopPropagation(); trySpecial(); });
+const tap = f => e => { e.stopPropagation(); if (paused) setPaused(false); else f(); };
+$('#dashBtn').addEventListener('pointerdown', tap(tryDash));
+$('#atkBtn').addEventListener('pointerdown', tap(tryAttack));
+$('#spBtn').addEventListener('pointerdown', tap(trySpecial));
 // iOS Safari ignores user-scalable=no: one thumb moving + one on ATK reads as a pinch, and fast taps as a double-tap zoom.
 // Block pinches only mid-fight (so a zoomed menu can always be pinched back), and snap any zoom back to 100% when not typing.
 const fighting = () => mode === 'play' || mode === 'duel';
@@ -864,7 +876,7 @@ function spawnEnemy(type) {
 function update(rawDt) {
   let dt = rawDt;
   if (S && mode === 'play') {   // hit-stop and cinematic slow motion
-    if (S.stop > 0) { S.stop -= rawDt; dt = rawDt * .04; }
+    if (S.stop > 0) { S.stop -= rawDt; dt = 0; }   // full freeze: hit-stop length never changes game time
     if (S.cine) { const c = S.cine; c.t += rawDt; if (c.t < c.slow) dt *= .28; if (c.t > c.dur) S.cine = null; }
     if (S.flash > 0) S.flash -= rawDt * 2.5;
   }
@@ -1209,11 +1221,16 @@ function drawOverlay() {
   drawCine();
   drawSysMsg();
   drawIntroCard(1 / 60);
+  if (paused) {
+    g.fillStyle = 'rgba(8,5,18,.82)'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#eef0ff'; g.textAlign = 'center'; g.font = '700 34px Inter'; g.fillText('PAUSED', W / 2, H / 2 - 10);
+    g.font = '500 16px Inter'; g.fillStyle = 'rgba(238,240,255,.75)'; g.fillText(isTouch ? 'Tap to resume' : 'Click or press any key to resume', W / 2, H / 2 + 24); g.textAlign = 'left';
+  }
 }
 
 function loop(now) {
   const dt = Math.min(.033, (now - last) / 1000); last = now;
-  update(dt); draw(); GameRec.frame();
+  if (paused) draw(); else { update(dt); draw(); GameRec.frame(); }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
