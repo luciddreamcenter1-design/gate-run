@@ -1189,6 +1189,12 @@ function draw3D() {
       if (e.brkMax) { g.fillStyle = 'rgba(43,37,80,.9)'; g.fillRect(p.x - w / 2, p.y + 7, w, 3);
         g.fillStyle = e.brokenT > 0 && Math.floor(T * 8) % 2 ? '#ffffff' : '#38d6ff'; g.fillRect(p.x - w / 2, p.y + 7, w * (e.brokenT > 0 ? 1 : clamp(e.brk / e.brkMax, 0, 1)), 3); }
     }
+    if (mode === 'play') for (const e of enemies) {   // off-screen threats: an arrow at the screen edge pointing at them
+      const q = screenPos(e.x, e.y, 1); if (!q.behind && q.x > 0 && q.x < W && q.y > 0 && q.y < H) continue;
+      const ax = q.behind ? W - q.x : q.x, ay = q.behind ? H : q.y;
+      g.save(); g.translate(clamp(ax, 22, W - 22), clamp(ay, 130, H - 22)); g.rotate(Math.atan2(ay - H / 2, ax - W / 2));
+      g.fillStyle = e.type === 'boss' ? '#ffd84a' : e.state === 'wind' ? '#ffffff' : '#ff4d6d'; g.beginPath(); g.moveTo(11, 0); g.lineTo(-6, -8); g.lineTo(-6, 8); g.fill(); g.restore();
+    }
     const n = screenPos(P.x, P.y);
     g.font = '700 12px "Chakra Petch"'; g.textAlign = 'center'; g.fillStyle = 'rgba(238,240,255,.85)'; g.fillText(hunterName.slice(0, 14), n.x, n.y + 20);
   }

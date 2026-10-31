@@ -341,8 +341,8 @@ if (renderer) {
     a.shadow.scale.setScalar(HEIGHT[a.char] * .55);
     a.g.position.set(x, y, z);
     const cdx = camera.position.x - x, cdz = camera.position.z - z, lean = Math.max(0, Math.atan2(camera.position.y - y, Math.hypot(cdx, cdz)) - .3) * .7;
-    a.g.rotation.order = 'YXZ'; a.g.rotation.set(lean, Math.atan2(cdx, cdz), 0);   // lean toward the overhead camera so sprites don't look squashed
-    a.shadow.rotation.set(-Math.PI / 2 - lean, 0, -a.g.rotation.y); a.shadow.position.y = -y + .02;
+    a.g.rotation.order = 'YXZ'; a.g.rotation.set(-lean, Math.atan2(cdx, cdz), 0);   // lean toward the overhead camera (negative x tips the top toward it) so sprites don't look squashed
+    a.shadow.rotation.set(-Math.PI / 2 + lean, 0, -a.g.rotation.y); a.shadow.position.y = -y + .02;
     return true;
   }
   const actors = new Map();           // enemy -> actor
@@ -366,35 +366,67 @@ if (renderer) {
   }
   addEventListener('resize', resize); resize();
 
+  // fight camera: frame the hero plus the real threats (Cinemachine-style target group), zoom out only as far as needed,
+  // keep the view inside the arena, and move as one rigid rig on critically damped springs, so the look-at never sways
+  const rig = { x: 0, z: 0, d: 0, vx: 0, vz: 0, vd: 0, on: false }, camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
+  let blend = 0;
+  function damp(cur, to, v, time, dt) {   // Unity SmoothDamp: critically damped, frame-rate independent; dt = 0 (hit-stop) holds still
+    const o = 2 / time, x = o * dt, e = 1 / (1 + x + .48 * x * x + .235 * x * x * x), ch = cur - to, tmp = (rig[v] + o * ch) * dt;
+    rig[v] = (rig[v] - o * tmp) * e; return to + (ch + tmp) * e;
+  }
+  function frameFight(dt) {
+    const portrait = camera.aspect < 1, pitch = portrait ? .84 : .7, vfov = portrait ? 46 : 34;   // portrait: steeper and wider to fit the narrow screen
+    const tanV = Math.tan(vfov * Math.PI / 360), tanH = tanV * camera.aspect, sp = Math.sin(pitch), cp = Math.cos(pitch);
+    const AX = W / 2 / K, AZ = H / 2 / K, px = wx(P.x), pz = wz(P.y), L = .82;   // L: framed things stay inside 82% of the screen
+    // exact camera distance that fits a point (dx, dy, dz from the focus) on screen with this pitch and lens; nearer points get less room
+    const fit = (dx, dy, dz) => { const depth = dy * sp + dz * cp; return Math.max(Math.abs(dx) / (L * tanH), Math.abs(dy * cp - dz * sp) / (L * tanV)) + depth; };
+    const need = (x, z, h) => Math.max(fit(x, -.9, z), fit(x, h - .9, z));   // feet and head
+    const threat = (e, ex, ez) => mode === 'duel' || e.type === 'boss' || e.state === 'wind' || e.state === 'atk' || Math.hypot(ex - px, ez - pz) < 6.5;
+    let x0 = px, x1 = px, z0 = pz, z1 = pz;
+    for (const e of enemies) {
+      const ex = wx(e.x), ez = wz(e.y);
+      if (threat(e, ex, ez)) { x0 = Math.min(x0, ex); x1 = Math.max(x1, ex); z0 = Math.min(z0, ez); z1 = Math.max(z1, ez); }
+    }
+    const near = 7.65 / tanV, full = Math.max((AX + .6) / tanH, (AZ + .6) * sp / tanV), far = Math.max(near, Math.min(full, near * 1.6));   // near: hero ~15% of screen height
+    let tx = (px + (x0 + x1) / 2) / 2, tz = (pz + (z0 + z1) / 2) / 2;   // halfway between the hero and the fight: the hero stays near the middle
+    const dEst = clamp(rig.on ? rig.d : near, near, far), cx = Math.max(0, AX + .6 - dEst * tanH), hd = dEst * tanV / sp;
+    tx = clamp(tx, -cx, cx); tz = clamp(tz, -Math.max(0, AZ + 2 - hd), Math.max(0, AZ + .6 - hd));   // keep the view inside the arena (a little past the back wall)
+    let d = near;
+    for (const e of enemies) { const ex = wx(e.x), ez = wz(e.y); if (threat(e, ex, ez)) d = Math.max(d, need(ex - tx, ez - tz, e.type === 'boss' ? 4.4 : e.type === 'brute' ? 2.7 : 1.4)); }
+    d = Math.max(Math.min(d, far), need(px - tx, pz - tz, 2.3));        // the hero is always in frame, even past the zoom cap
+    if (!rig.on) Object.assign(rig, { x: tx, z: tz, d, vx: 0, vz: 0, vd: 0, on: true });
+    rig.x = damp(rig.x, tx, 'vx', .22, dt); rig.z = damp(rig.z, tz, 'vz', .22, dt);
+    rig.d = damp(rig.d, d, 'vd', d > rig.d ? .35 : .8, dt);              // zoom out fast when a threat shows up, ease back in slowly
+    camT.set(rig.x, .9, rig.z); camP.set(rig.x, .9 + rig.d * sp, rig.z + rig.d * Math.cos(pitch));
+    scene.fog.density = .028 * 15 / rig.d;                                 // same haze on the fighters at any zoom
+    return vfov;
+  }
+
   function updateCamera(play, gx, gz, gy, dt) {
-    const D = Math.max(8, H / K * .5);
-    const c = S && S.cine;
+    const c = S && S.cine; let fov = 48;
     if (play && c && c.boss && c.boss.hp > 0) {          // boss entrance: low, close, slowly circling
       const bx = wx(c.boss.x), bz = wz(c.boss.y), a = .45 - c.t * .2;
       camT.set(bx, 1.4, bz); camP.set(bx + Math.sin(a) * 10, 4.2, bz + Math.cos(a) * 10);
     } else if (play && c && P) {                          // boss defeated: push in on the hunter
       const px = wx(P.x), pz = wz(P.y);
       camT.set(px, 1.2, pz); camP.set(px + 2.5, 3.2 + c.t, pz + 5.5 + c.t);
-    } else if (play && mode === 'duel' && enemies[0]) {   // 1v1: frame both fighters, pull back as they separate
-      const ax = wx(P.x), az = wz(P.y), bx = wx(enemies[0].x), bz = wz(enemies[0].y);
-      const sep = Math.hypot(ax - bx, (az - bz) * 1.3), Dd = Math.max(D * .8, sep * 1.05 / Math.max(.5, camera.aspect) * .62 + 5.5);
-      camT.set((ax + bx) / 2, .9, (az + bz) / 2);
-      camP.set(camT.x, Dd * .95, camT.z + Dd * 1.15);
-    } else if (play) {
-      const px = wx(P.x), pz = wz(P.y);
-      camT.set(px * .8, .9, pz * .8);
-      camP.set(camT.x, D * .95, camT.z + D * 1.15);        // three-quarter overhead: ~40° down, flatter lens; the arena backdrop shows past the far floor edge
+    } else if (play && P) {                               // solo and 1v1 fights (1v1 frames both fighters)
+      fov = frameFight(dt) + (P.dash > 0 ? 2 : 0);          // dash: small lens kick
     } else {   // menu / end: slow orbit around the Gate
       const a = Math.sin(T * .12) * .7;
       camT.set(gx, gy * .8, gz);
       camP.set(gx + Math.sin(a) * 16, gy + 1.5, gz + Math.cos(a) * 16);
     }
-    const k = inited && Number.isFinite(camera.position.x) ? 1 - Math.pow(.02, dt * 3) : 1;
-    camera.position.lerp(camP, k);
-    if (S && S.shake > .5) camera.position.add(v3.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)).multiplyScalar(S.shake * .012));
-    const fov = play && !c ? (P && P.dash > 0 ? 46 : 38) : 48;   // play: flatter lens for the overhead view; dash: quick FOV kick
-    if (Math.abs(camera.fov - fov) > .05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 12); camera.updateProjectionMatrix(); }
-    camera.lookAt(camT);
+    if (!play || c) { blend = .6; rig.on = rig.on && play; scene.fog.density = .028; }   // after a cinematic, ease back into the rig
+    else blend = Math.max(0, blend - dt);
+    const k = !inited || !Number.isFinite(camPos.x) ? 1 : play && !c && blend <= 0 ? 1 : 1 - Math.pow(.02, dt * 3);
+    camPos.lerp(camP, k); camLook.lerp(camT, k); camera.position.copy(camPos);
+    if (S && S.shake > .5) {   // shake on top of the smoothed rig (never fed back into it), smooth noise on real time so it still moves during hit-stop
+      const a = S.shake * .012, t = performance.now() / 1000;
+      camera.position.x += a * (Math.sin(t * 53) + .6 * Math.sin(t * 31.7)); camera.position.y += a * (Math.sin(t * 47.3 + 1) + .6 * Math.sin(t * 29.1)); camera.position.z += a * .5 * Math.sin(t * 41.9 + 2);
+    }
+    if (Math.abs(camera.fov - fov) > .05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 12 || 1); camera.updateProjectionMatrix(); }
+    camera.lookAt(camLook);
     inited = true;
   }
 
@@ -576,7 +608,7 @@ if (renderer) {
       for (const k of ['position', 'color', 'size']) sparks.geo.attributes[k].needsUpdate = true;
     }
 
-    if (mode !== lastMode) { lastMode = mode; inited = false; }   // snap the camera on mode changes (T resets per run)
+    if (mode !== lastMode) { lastMode = mode; inited = false; rig.on = false; }   // snap the camera on mode changes (T resets per run)
     updateCamera(play, gx, gz, gy, dt);
     lastT = T;
     bloom.strength = S && S.cine ? .32 : .7;   // keep cinematic close-ups from blooming out
