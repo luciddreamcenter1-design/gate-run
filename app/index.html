@@ -450,6 +450,13 @@ const ROSTER = [
   { id: 'brann', name: 'Brann', quote: 'Every Gate breaks the same way. Loud.', color: '#ffd84a' },
   { id: 'vex',   name: 'Vex',   quote: "The rift chose me. I'm returning the favor.", color: '#b18cff' },
 ];
+// distinct kits on the shared moveset: move/atk/reach multiply base stats (atk < 1 = faster), fin = extra finisher damage, armor = hits don't interrupt attacks
+const KITS = {
+  ren:   { tag: 'Balanced', hp: 5, move: 1,    atk: 1,    reach: 1,    dashCD: .55, fin: 0, armor: false, spK: 1 },
+  kira:  { tag: 'Swift',    hp: 4, move: 1.15, atk: .85,  reach: .9,   dashCD: .35, fin: 0, armor: false, spK: 1 },
+  brann: { tag: 'Heavy',    hp: 6, move: .88,  atk: 1.15, reach: 1.1,  dashCD: .7,  fin: 1, armor: true,  spK: 1 },
+  vex:   { tag: 'Rift Reach', hp: 4, move: 1,  atk: 1,    reach: 1.35, dashCD: .55, fin: 0, armor: false, spK: 1.3 },
+};
 const PERSONAL_QUOTE = "I'm the one the Gates should fear.";
 let rosterPick = (() => { try { return localStorage.getItem('crasher') || 'ren'; } catch (e) { return 'ren'; } })();
 const rosterArt = {};
@@ -459,7 +466,7 @@ function renderRosterRow() {
   const row = $('#rosterRow'); row.innerHTML = '';
   for (const r of ROSTER) {
     const b = document.createElement('button'); b.className = 'arena' + (r.id === rosterPick && !personalSprites ? ' on' : '');
-    b.innerHTML = `<img src="roster/${r.id}.jpg" alt="" style="height:64px;object-position:center 20%"><span>${r.name}</span>`;
+    b.innerHTML = `<img src="roster/${r.id}.jpg" alt="" style="height:64px;object-position:center 20%"><span>${r.name}<br><small style="opacity:.7">${KITS[r.id].tag}</small></span>`;
     b.onclick = () => { rosterPick = r.id; try { localStorage.setItem('crasher', r.id); } catch (e) {} window.useRosterHunter && window.useRosterHunter(r.id); AK.init(); AK.play('vo_' + r.id, 1); renderRosterRow(); };
     row.appendChild(b);
   }
@@ -676,8 +683,9 @@ function beginIntro() {
   const gp = gatePos();
   P = { x: W / 2, y: Math.min(H - 80, gp.y + 170), vx: 0, vy: 0, r: 20, hp: 5, inv: 0, dash: 0, dashCD: 0, atk: 0, face: 1, lvl: 1, xp: 0, flash: 0,
         state: 'free', st: 0, step: 0, buf: false, comboT: 0, sp: 0, hitDone: false, anim: { name: 'idle', t: 0 } };
+  P.kit = KITS[fighter().id] || KITS.ren; P.hp = P.maxHp = P.kit.hp; P.crit = 0;
   enemies = []; shards = []; parts = []; texts = []; slashes = [];
-  S = { score: 0, kills: 0, time: 0, spawn: 1.2, boss: false, shake: 0, msg: '', msgT: 0, elapsed: 0, combo: 0, comboT: 0, maxCombo: 0, tele: [], hits: 0, pickups: [],
+  S = { slowT: 0, score: 0, kills: 0, time: 0, spawn: 1.2, boss: false, shake: 0, msg: '', msgT: 0, elapsed: 0, combo: 0, comboT: 0, maxCombo: 0, tele: [], hits: 0, pickups: [],
         gate: 0, phase: 'break', breakT: 2.2, toSpawn: 0, brutes: 0 };
   P.weapon = null;
   sysMsg('[RIFT OS] A Gate has opened.');
@@ -753,7 +761,7 @@ const WEAPONS = {
   cleaver: { name: "HOLLOW KING'S CLEAVER",   color: '#ffd84a', dmg: 3,   speed: 1.45, range: 1.55, kb: 1.9, dur: 30 },
 };
 const WPN = () => P.weapon ? WEAPONS[P.weapon.kind] : null;
-const atkSpeed = () => Math.max(.5, Math.pow(.95, P.lvl - 1) * (WPN() ? WPN().speed : 1));
+const atkSpeed = () => Math.max(.5, Math.pow(.95, P.lvl - 1) * (WPN() ? WPN().speed : 1) * P.kit.atk);
 function dropWeapon(x, y, kind) {
   kind = kind || ['flame', 'thunder', 'twin'][Math.floor(Math.random() * 3)];
   S.pickups.push({ x: clamp(x, 40, W - 40), y: clamp(y, 80, H - 40), kind, t: 0 });
@@ -768,7 +776,7 @@ function startAttack(step) {
   const t = nearestEnemy(230);
   if (t) { if (Math.abs(t.x - P.x) > 6) P.face = Math.sign(t.x - P.x); P.y += clamp(t.y - P.y, -40, 40) * .5; }   // aim assist
   Object.assign(P, { state: 'atk', step, st: 0, buf: false, hitDone: false });
-  slashes.push({ x: P.x, y: P.y, face: P.face, step, ang: P.face > 0 ? 0 : Math.PI, life: .22, max: .22, delay: COMBO[step].hit * atkSpeed(), color: WPN() && WPN().color });
+  slashes.push({ x: P.x, y: P.y, face: P.face, step, ang: P.face > 0 ? 0 : Math.PI, life: .22, max: .22, delay: COMBO[step].hit * atkSpeed(), color: P.crit > 0 ? '#ffd84a' : WPN() && WPN().color });
   AK.play('slash', step === 3 ? .7 : .45, step === 3 ? .8 : rand(.95, 1.15));
 }
 function tryAttack() {
@@ -785,8 +793,13 @@ function tryDash() {
   if (joy) { dx = joy.x - joy.ox; dy = joy.y - joy.oy; }
   const m = Math.hypot(dx, dy); if (m < .1) { dx = P.face; dy = 0; } else { dx /= m; dy /= m; }
   if (Math.abs(dx) > .2) P.face = Math.sign(dx);
-  Object.assign(P, { state: 'dash', st: 0, ddx: dx, ddy: dy, dash: .2 }); P.dashCD = .55; P.inv = Math.max(P.inv, .28);
+  Object.assign(P, { state: 'dash', st: 0, ddx: dx, ddy: dy, dash: .2 }); P.dashCD = P.kit.dashCD; P.inv = Math.max(P.inv, .28);
   AK.play('dash', .6); burst(P.x, P.y, '#38d6ff', 16, 180);
+  // perfect dodge: dash out of an attack that is about to land -> slow motion, and the next hit crits
+  if (enemies.some(e => !e.summon && (e.state === 'wind' && e.wind - e.st < .22 || e.state === 'atk' && !e.hitDone && e.st < .15) && Math.hypot(e.x - P.x, (e.y - P.y) * 1.3) < e.reach + e.r + 30)) {
+    S.slowT = .6; P.crit = 1.5; P.inv = Math.max(P.inv, .6); S.flash = .35;
+    floatText(P.x, P.y - 70, 'PERFECT', '#9fe8ff'); AK.play('whoosh', .9); AK.play('braam', .4, 1.4);
+  }
 }
 function trySpecial() {
   if (mode === 'duel') return Duel.press('sp');
@@ -797,17 +810,23 @@ function trySpecial() {
 }
 function hitEnemy(e, dmg, kb, stun, launch, face) {
   const boss = e.type === 'boss', brute = e.type === 'brute';
+  if (e.brokenT > 0) dmg = Math.ceil(dmg * 1.5);   // broken: wide open
   e.hp -= dmg; e.hit = .12; e.lastHit = S.elapsed;
-  if (!boss || stun > 1) { e.stun = boss ? .25 : stun * (brute ? .6 : 1); e.state = 'stun'; e.st = 0; S.tele = S.tele.filter(t => t.owner !== e); }
+  if (!boss || stun > 1) { const s = boss ? .25 : stun * (brute ? .6 : 1); e.stun = e.brokenT > 0 ? Math.max(e.stun, s) : s; e.state = 'stun'; e.st = 0; S.tele = S.tele.filter(t => t.owner !== e); }
+  if (e.brkMax && e.brokenT <= 0 && (e.brk += dmg) >= e.brkMax) {   // break gauge full: long stagger
+    e.brk = 0; e.brokenT = e.stun = boss ? 3 : 2; e.state = 'stun'; e.st = 0; S.tele = S.tele.filter(t => t.owner !== e);
+    floatText(e.x, e.y - e.r - 34, 'BREAK!', '#38d6ff'); S.stop = .14; S.shake = 14; AK.play('braam', .8, 1.2); burst(e.x, e.y - 10, '#38d6ff', 30, 300);
+  }
   e.vx += face * kb * (boss ? .12 : brute ? .5 : 1);
   if (launch && !boss) e.vz = launch * (brute ? .45 : 1);
   S.combo++; S.comboT = 1.8; S.maxCombo = Math.max(S.maxCombo, S.combo); S.hits++;
-  P.sp = Math.min(100, P.sp + (boss ? 4 : 6));
+  P.sp = Math.min(100, P.sp + (boss ? 4 : 6) * P.kit.spK);
   const crit = dmg >= 2; floatText(e.x, e.y - e.r - 10, (crit ? '' : '') + dmg * 37 + (crit ? '!' : ''), crit ? '#ffd84a' : '#eef0ff');
   burst(e.x, e.y - 10, '#ffffff', crit ? 14 : 7, crit ? 260 : 160); burst(e.x, e.y - 10, '#38d6ff', 6, 200);
 }
 function doComboHit(m) {
-  const w = WPN(), range = m.range * (w ? w.range : 1), dmg = Math.max(1, Math.round(m.dmg * (w ? w.dmg : 1))), kb = m.kb * (w ? w.kb : 1);
+  const w = WPN(), crit = P.crit > 0, range = m.range * (w ? w.range : 1) * P.kit.reach, kb = m.kb * (w ? w.kb : 1);
+  const dmg = (Math.max(1, Math.round(m.dmg * (w ? w.dmg : 1))) + (m.launch ? P.kit.fin : 0)) * (crit ? 2 : 1);
   let any = false; const struck = [];
   for (const e of enemies) {
     const dx = e.x - P.x;
@@ -827,7 +846,8 @@ function doComboHit(m) {
     }
   }
   if (w && w.kb > 1.5 && any) { S.shake = 14; S.stop = .09; }
-  if (any) { AK.play('hit', .65, rand(.85, 1.1)); S.stop = m.launch ? .1 : .05; S.shake = m.launch ? 10 : 5; }
+  if (any) { AK.play('hit', .65, rand(.85, 1.1)); S.stop = Math.max(S.stop || 0, m.launch ? .1 : .05); S.shake = m.launch ? 10 : 5; }
+  if (any && crit) { P.crit = 0; S.stop = Math.max(S.stop, .12); S.shake = 12; }   // perfect-dodge counter spent
 }
 function doSpecialHit() {
   for (const e of enemies) {
@@ -848,7 +868,7 @@ function enemyAttackHits(e) {   // returns true if this enemy's active attack co
 function hurtPlayer(from) {
   if (P.inv > 0 || P.state === 'dash') return;
   P.hp--; P.inv = 1; P.flash = .3; S.shake = 14; S.stop = .08; S.combo = 0;
-  Object.assign(P, { state: 'hurt', st: 0 }); P.vx = Math.sign(P.x - from.x || 1) * 380;
+  if (!(P.kit.armor && P.state === 'atk')) { Object.assign(P, { state: 'hurt', st: 0 }); P.vx = Math.sign(P.x - from.x || 1) * 380; }   // armored kits keep swinging
   burst(P.x, P.y, '#ff4d6d', 20, 220); AK.play('hurt', .9);
   if (P.hp <= 0) finish(false);
 }
@@ -868,7 +888,8 @@ function spawnEnemy(type) {
             : { r: 16, hp: 2, sp: 88 + t * .8, pts: 25, drop: 1, reach: 70, wind: .38, atk: .28, rec: .5 };
   const gN = Math.max(1, S.gate), hpK = 1 + (gN - 1) * .16, spK = Math.min(1.6, 1 + (gN - 1) * .045), windK = Math.max(.55, 1 - (gN - 1) * .035);
   def.hp = Math.ceil(def.hp * hpK); def.sp *= spK; def.wind *= windK; def.rec *= windK; def.pts = Math.round(def.pts * (1 + (gN - 1) * .1));
-  enemies.push({ type, x, y, vx: 0, vy: 0, z: 0, vz: 0, maxhp: def.hp, ...def, hit: 0, wob: Math.random() * 6, state: 'chase', st: 0, face: -1, stun: 0, cd: rand(.3, 1.2), anim: { name: 'move', t: 0 } });
+  enemies.push({ type, x, y, vx: 0, vy: 0, z: 0, vz: 0, maxhp: def.hp, ...def, hit: 0, wob: Math.random() * 6, state: 'chase', st: 0, face: -1, stun: 0, cd: rand(.3, 1.2), anim: { name: 'move', t: 0 },
+                brk: 0, brkMax: type === 'boss' ? 20 : type === 'brute' ? 6 : 0, brokenT: 0 });
   burst(x, y, '#7c5cff', 8, 90);
 }
 
@@ -878,6 +899,7 @@ function update(rawDt) {
   if (S && mode === 'play') {   // hit-stop and cinematic slow motion
     if (S.stop > 0) { S.stop -= rawDt; dt = 0; }   // full freeze: hit-stop length never changes game time
     if (S.cine) { const c = S.cine; c.t += rawDt; if (c.t < c.slow) dt *= .28; if (c.t > c.dur) S.cine = null; }
+    if (S.slowT > 0) { S.slowT -= rawDt; dt *= .3; }   // perfect-dodge slow motion
     if (S.flash > 0) S.flash -= rawDt * 2.5;
   }
   T += dt;
@@ -898,7 +920,7 @@ function update(rawDt) {
     if (S.breakT <= 0) {
       S.gate++; S.phase = 'fight'; const gN = S.gate, bossGate = gN % 5 === 0;
       S.toSpawn = bossGate ? 4 + gN : 5 + Math.round(gN * 3.4); S.brutes = gN >= 2 ? Math.floor(gN * .7) : 0; S.spawn = .6;
-      sysMsg('[RIFT OS] Gate ' + gN + ' has opened.'); AK.play('gate_open', .7); if (gN > 1) AK.vo('vo_gate_open');
+      sysMsg('[RIFT OS] ' + gateRank(gN)[0] + '-Rank Gate ' + gN + ' has opened.'); AK.play('gate_open', .7); if (gN > 1) AK.vo('vo_gate_open');
       if (bossGate) { spawnEnemy('boss'); sysMsg('[RIFT OS] Gate ' + gN + ' · Breach Lord detected.'); S.shake = 14;
         S.cine = { t: 0, dur: 2.8, slow: 1.8, title: 'BREACH LORD', sub: 'GATE ' + gN + ' · THE HOLLOW KING', boss: enemies[enemies.length - 1] };
         AK.play('boss', 1); AK.play('braam', .8); setTimeout(() => AK.vo('vo_boss'), 700); if (!S.boss) GameRec.start(9, 'boss'); S.boss = true; }
@@ -906,12 +928,12 @@ function update(rawDt) {
   } else if (S.toSpawn <= 0 && !enemies.length) {
     S.phase = 'break'; S.breakT = 4.5; const bonus = 150 * S.gate;
     S.score += bonus; floatText(P.x, P.y - 60, 'GATE CLEAR +' + bonus, '#ffd84a');
-    if (P.hp < 5) { P.hp++; floatText(P.x, P.y - 84, '+1 ♥', '#ff4d6d'); }
+    if (P.hp < P.maxHp) { P.hp++; floatText(P.x, P.y - 84, '+1 ♥', '#ff4d6d'); }
     sysMsg('[RIFT OS] Gate ' + S.gate + ' cleared.'); AK.play('win', .6); AK.vo('vo_cleared');
     dropWeapon(W / 2 + rand(-60, 60), clamp(gatePos().y + 190, 120, H - 120));   // the Gate leaves a weapon behind
   }
   // player
-  P.st += dt; P.dashCD -= dt; P.inv -= dt; P.flash -= dt; P.comboT -= dt; P.dash -= dt;
+  P.st += dt; P.dashCD -= dt; P.inv -= dt; P.flash -= dt; P.comboT -= dt; P.dash -= dt; P.crit -= dt;
   if (S.comboT > 0) { S.comboT -= dt; if (S.comboT <= 0) S.combo = 0; }
   let dx = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0);
   let dy = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
@@ -919,7 +941,7 @@ function update(rawDt) {
   const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
   P.moving = false;
   if (P.state === 'free') {
-    P.x += dx * 250 * dt; P.y += dy * 210 * dt; P.moving = m > .1;
+    P.x += dx * 250 * P.kit.move * dt; P.y += dy * 210 * P.kit.move * dt; P.moving = m > .1;
     if (Math.abs(dx) > .15) P.face = Math.sign(dx);
     ANIM(P.anim, P.moving ? 'run' : 'idle', T);
   } else if (P.state === 'atk') {
@@ -955,6 +977,7 @@ function update(rawDt) {
   // enemies: chase -> wind-up (telegraph) -> attack -> recover; hits stun and juggle them
   for (const e of enemies) {
     e.st += dt; e.hit -= dt; e.wob += dt * 8; e.cd -= dt;
+    if (e.brokenT > 0) e.brokenT -= dt; else if (e.brk > 0 && S.elapsed - e.lastHit > 2) e.brk = Math.max(0, e.brk - dt * 2);   // gauge drains if you stop hitting
     e.x += e.vx * dt; e.y += e.vy * dt; e.vx *= .86; e.vy *= .86;
     e.z += e.vz * dt; e.vz -= 1700 * dt; if (e.z <= 0) { e.z = 0; e.vz = 0; }
     const ddx = P.x - e.x, ddy = P.y - e.y, d = Math.hypot(ddx, ddy * 1.3);
@@ -1024,7 +1047,7 @@ function update(rawDt) {
   }
   shards = shards.filter(s => !s.got && s.t < 12);
   const need = 5 + P.lvl * 4;
-  if (P.xp >= need) { P.xp -= need; P.lvl++; sysMsg('[RIFT OS] Level up. Lv. ' + P.lvl); AK.play('levelup', .7); AK.vo('vo_levelup'); burst(P.x, P.y, '#ffd84a', 30, 240); if (P.hp < 5 && P.lvl % 2 === 0) P.hp++; }
+  if (P.xp >= need) { P.xp -= need; P.lvl++; sysMsg('[RIFT OS] Level up. Lv. ' + P.lvl); AK.play('levelup', .7); AK.vo('vo_levelup'); burst(P.x, P.y, '#ffd84a', 30, 240); if (P.hp < P.maxHp && P.lvl % 2 === 0) P.hp++; }
 
 }
 
@@ -1089,7 +1112,8 @@ function drawEnemy(e) {
   g.fillStyle = '#ff4d6d'; g.shadowColor = '#ff4d6d'; g.shadowBlur = 10;
   const es = Math.max(2, e.r * .16);
   g.beginPath(); g.arc(e.x - e.r * .35, e.y - e.r * .15 + wob, es, 0, 6.283); g.arc(e.x + e.r * .35, e.y - e.r * .15 + wob, es, 0, 6.283); g.fill(); g.shadowBlur = 0;
-  if (e.type !== 'imp') { const w = e.r * 2; g.fillStyle = '#2b2550'; g.fillRect(e.x - w / 2, e.y - e.r - 14, w, 4); g.fillStyle = e.type === 'boss' ? '#ffd84a' : '#ff4d6d'; g.fillRect(e.x - w / 2, e.y - e.r - 14, w * clamp(e.hp / e.maxhp, 0, 1), 4); }
+  if (e.type !== 'imp') { const w = e.r * 2; g.fillStyle = '#2b2550'; g.fillRect(e.x - w / 2, e.y - e.r - 14, w, 4); g.fillStyle = e.type === 'boss' ? '#ffd84a' : '#ff4d6d'; g.fillRect(e.x - w / 2, e.y - e.r - 14, w * clamp(e.hp / e.maxhp, 0, 1), 4);
+    if (e.brkMax) { g.fillStyle = e.brokenT > 0 && Math.floor(T * 8) % 2 ? '#ffffff' : '#38d6ff'; g.fillRect(e.x - w / 2, e.y - e.r - 8, w * (e.brokenT > 0 ? 1 : clamp(e.brk / e.brkMax, 0, 1)), 3); } }
 }
 function drawHUD() {
   const top = 14 + ($('#safeTop').offsetHeight || 0);   // below the notch / Dynamic Island
@@ -1097,13 +1121,15 @@ function drawHUD() {
   roundRect(12, top, 196, 62, 12); g.fill(); g.stroke();
   drawPortraitHead(43, top + 31, 22, '#38d6ff');
   g.fillStyle = '#eef0ff'; g.font = '700 15px "Chakra Petch"'; g.textAlign = 'left'; g.fillText(hunterName.slice(0, 14), 74, top + 25);
-  for (let i = 0; i < 5; i++) { const hx = 80 + i * 18, hy = top + 44; g.fillStyle = i < P.hp ? '#ff4d6d' : '#3a3560'; g.beginPath(); g.moveTo(hx, hy - 7); g.lineTo(hx + 6, hy); g.lineTo(hx, hy + 7); g.lineTo(hx - 6, hy); g.fill(); }
+  for (let i = 0; i < P.maxHp; i++) { const hx = 80 + i * (P.maxHp > 5 ? 15 : 18), hy = top + 44; g.fillStyle = i < P.hp ? '#ff4d6d' : '#3a3560'; g.beginPath(); g.moveTo(hx, hy - 7); g.lineTo(hx + 6, hy); g.lineTo(hx, hy + 7); g.lineTo(hx - 6, hy); g.fill(); }
   g.fillStyle = '#ffd84a'; g.font = '600 12px "Chakra Petch"'; g.fillText('Lv.' + P.lvl, 172, top + 48);
   const ty = W < 560 ? top + 84 : top;
   g.textAlign = 'center'; g.font = '600 11px "Chakra Petch"'; g.fillStyle = '#9a9cc4';
   g.fillText(S.phase === 'break' ? (S.gate ? 'NEXT GATE IN ' + Math.ceil(S.breakT) : 'GET READY') : (S.toSpawn + enemies.length) + ' RIFTSPAWN LEFT', W / 2, ty + 14);
   g.font = '700 26px "Chakra Petch"'; g.fillStyle = S.gate % 5 === 0 && S.phase === 'fight' ? '#ffd84a' : '#eef0ff';
-  g.fillText('GATE ' + Math.max(1, S.gate + (S.phase === 'break' && S.gate ? 1 : 0)), W / 2, ty + 40);
+  const gShown = Math.max(1, S.gate + (S.phase === 'break' && S.gate ? 1 : 0)), gr = gateRank(gShown);
+  g.fillText('GATE ' + gShown, W / 2, ty + 40);
+  g.font = '700 12px "Chakra Petch"'; g.fillStyle = gr[2]; g.fillText(gr[0] + '-RANK', W / 2, ty + 56);
   g.textAlign = 'right'; g.font = '600 11px "Chakra Petch"'; g.fillStyle = '#9a9cc4'; g.fillText('SCORE', W - 16, top + 14);
   g.font = '700 22px "Chakra Petch"'; g.fillStyle = '#eef0ff'; g.fillText(S.score.toLocaleString(), W - 16, top + 38);
   g.font = '700 14px "Chakra Petch"'; g.fillStyle = rankColor(rankOf()); g.fillText('RANK ' + rankOf(), W - 16, top + 58);
@@ -1160,6 +1186,8 @@ function draw3D() {
       const p = screenPos(e.x, e.y, e.r / R3.K * 2.5), w = e.type === 'boss' ? 96 : 44;
       g.fillStyle = 'rgba(43,37,80,.9)'; g.fillRect(p.x - w / 2, p.y, w, 5);
       g.fillStyle = e.type === 'boss' ? '#ffd84a' : '#ff4d6d'; g.fillRect(p.x - w / 2, p.y, w * clamp(e.hp / e.maxhp, 0, 1), 5);
+      if (e.brkMax) { g.fillStyle = 'rgba(43,37,80,.9)'; g.fillRect(p.x - w / 2, p.y + 7, w, 3);
+        g.fillStyle = e.brokenT > 0 && Math.floor(T * 8) % 2 ? '#ffffff' : '#38d6ff'; g.fillRect(p.x - w / 2, p.y + 7, w * (e.brokenT > 0 ? 1 : clamp(e.brk / e.brkMax, 0, 1)), 3); }
     }
     const n = screenPos(P.x, P.y);
     g.font = '700 12px "Chakra Petch"'; g.textAlign = 'center'; g.fillStyle = 'rgba(238,240,255,.85)'; g.fillText(hunterName.slice(0, 14), n.x, n.y + 20);
@@ -1236,6 +1264,8 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 /* ---------- end + Crasher Pass ---------- */
+const GATE_RANKS = [['S', 20, '#ffd84a'], ['A', 15, '#ff7a45'], ['B', 10, '#b18cff'], ['C', 6, '#38d6ff'], ['D', 3, '#4dffb0'], ['E', 0, '#9a9cc4']];   // [rank, from gate, color]
+const gateRank = n => GATE_RANKS.find(r => n >= r[1]);
 const RANKS = [['Legend', 15], ['Warlord', 10], ['Vanguard', 7], ['Breaker', 5], ['Runner', 3], ['Rookie', 0]];   // by gate reached
 function rankOf() { const gN = S ? S.gate : 0; for (const [r, v] of RANKS) if (gN >= v) return r; return 'Rookie'; }
 function rankColor(r) { return { Legend: '#ffd84a', Warlord: '#ff7a45', Vanguard: '#b18cff', Breaker: '#38d6ff', Runner: '#4dffb0', Rookie: '#9a9cc4' }[r]; }
