@@ -81,6 +81,15 @@ input[type=text]{width:100%;background:#0c0a18;border:1px solid var(--line);colo
 #spBtn{right:34px;bottom:calc(132px + env(safe-area-inset-bottom));width:70px;height:70px;border-color:#b18cff;background:rgba(177,140,255,.14)}
 #spBtn.ready{box-shadow:0 0 24px #b18cff;background:rgba(177,140,255,.4)}
 #toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:10px 14px;border-radius:10px;font-size:13px;z-index:20;display:none;max-width:calc(100% - 32px)}
+select{background:#0c0a18;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:0 10px;font:600 16px Inter,sans-serif;min-height:44px}
+.hs-list{list-style:none;padding:0;margin:12px 0 0;max-height:46vh;overflow-y:auto}
+.hs-list li{display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--line);font-size:14px}
+.hs-list li.me{background:rgba(56,214,255,.12);border-radius:8px}
+.hs-list .rk{width:26px;color:var(--muted);font:700 14px "Chakra Petch",sans-serif}
+.hs-list a{flex:1;min-width:0;color:var(--ink);text-decoration:none;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-list .net{font:700 11px "Chakra Petch",sans-serif;color:var(--muted);margin-right:6px}
+.hs-list .gt{font-size:12px;color:var(--muted);white-space:nowrap}
+.hs-list .sc{font:700 15px "Chakra Petch",sans-serif;color:var(--gold);min-width:64px;text-align:right}
 .tiny{font-size:12px;color:var(--muted);margin-top:12px;line-height:1.45}
 a{color:var(--gate2)}
 </style>
@@ -106,6 +115,7 @@ a{color:var(--gate2)}
     <label class="opt" id="fullOpt"><input type="checkbox" id="fullIn"> Full 3-shot trailer (takes a few minutes longer)</label>
     <button class="btn ghost" id="bGuest">Play as a guest Crasher</button>
     <button class="btn ghost" id="bDuel">⚔ 1v1 a friend online</button>
+    <button class="btn ghost" id="bScores">🏆 High scores</button>
     <div class="pill"><span class="dot" id="cDot"></span><span id="cTxt">Checking for ComfyUI…</span></div>
     <div class="tiny" id="keyRow"><a href="#" id="keyLink">Use my own Comfy key</a> <span id="tierTxt"></span></div>
     <div id="keyBox" style="display:none;margin-top:8px"><input type="text" id="keyIn" placeholder="comfyui-…" autocomplete="off" spellcheck="false">
@@ -140,8 +150,25 @@ a{color:var(--gate2)}
     <button class="btn" id="bSave">Save my Crasher Pass</button>
     <button class="btn" id="bReel" style="display:none">Make my Reel</button>
     <button class="btn ghost" id="bClip" style="display:none">Save my trailer</button>
+    <div id="hsBox" style="margin-top:16px">
+      <label class="field" for="hsHandle">Post your score</label>
+      <div class="row"><select id="hsNet" aria-label="Network"><option value="x">X</option><option value="ig">Instagram</option></select><input type="text" id="hsHandle" placeholder="@handle" maxlength="31" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <button class="btn" id="hsPost">Post to High Scores</button>
+      <div class="tiny" id="hsMsg"></div>
+      <ol class="hs-list" id="hsEndList"></ol>
+    </div>
     <div class="row"><button class="btn ghost" id="bAgain">Run it again</button><button class="btn ghost" id="bNew">New selfie</button></div>
     <div class="tiny">Post it with <b>#OpenSourceHiggsfield</b></div>
+  </div>
+</section>
+
+<section class="screen" id="sScores">
+  <div class="card">
+    <div class="kicker">Gate Run</div>
+    <h2>High Scores</h2>
+    <ol class="hs-list" id="hsTopList"></ol>
+    <div class="tiny" id="hsTopMsg"></div>
+    <button class="btn ghost" id="hsBack">Back</button>
   </div>
 </section>
 
@@ -1277,6 +1304,58 @@ const RANKS = [['Legend', 15], ['Warlord', 10], ['Vanguard', 7], ['Breaker', 5],
 function rankOf() { const gN = S ? S.gate : 0; for (const [r, v] of RANKS) if (gN >= v) return r; return 'Rookie'; }
 function rankColor(r) { return { Legend: '#ffd84a', Warlord: '#ff7a45', Vanguard: '#b18cff', Breaker: '#38d6ff', Runner: '#4dffb0', Rookie: '#9a9cc4' }[r]; }
 
+/* ---------- high scores: best score per X / Instagram handle (server.py keeps them in Upstash Redis) ---------- */
+const SCORE_API = /\.github\.io$/.test(location.hostname) ? 'https://gate-run.onrender.com' : '';   // the Pages copy has no server
+const HS_RE = { x: /^[A-Za-z0-9_]{1,15}$/, ig: /^(?!\.)(?!.*\.\.)[A-Za-z0-9._]{1,30}(?<!\.)$/ };
+const HS_URL = { x: 'https://x.com/', ig: 'https://instagram.com/' };
+const hsMine = () => { try { return { net: localStorage.getItem('hsNet') || 'x', handle: localStorage.getItem('hsHandle') || '' }; } catch (e) { return { net: 'x', handle: '' }; } };
+async function hsFetch(opts) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 45000);   // the free server can take ~30 s to wake up
+  try { const r = await fetch(SCORE_API + '/api/scores', { ...opts, signal: ctl.signal }); return { status: r.status, data: await r.json().catch(() => ({})) }; }
+  finally { clearTimeout(t); }
+}
+function hsRender(list, top, me) {
+  list.innerHTML = '';
+  top.forEach((e, i) => {
+    const li = document.createElement('li'), el = (tag, cls, txt) => { const x = document.createElement(tag); x.className = cls; x.textContent = txt; return x; };
+    if (me && me.handle && e.net === me.net && e.handle.toLowerCase() === me.handle.toLowerCase()) li.className = 'me';
+    const a = document.createElement('a'); a.href = HS_URL[e.net] + encodeURIComponent(e.handle); a.target = '_blank'; a.rel = 'noopener nofollow ugc';
+    a.append(el('span', 'net', e.net === 'ig' ? 'IG' : 'X'), '@' + e.handle);
+    li.append(el('span', 'rk', i + 1), a, el('span', 'gt', 'Gate ' + e.gate), el('span', 'sc', e.score.toLocaleString()));
+    list.appendChild(li);
+  });
+}
+const hsMsg = t => { $('#hsMsg').textContent = t; };
+function hsReset() {
+  const me = hsMine(); $('#hsNet').value = me.net; $('#hsHandle').value = me.handle;
+  $('#hsBox').style.display = S.score > 0 && S.gate >= 1 ? 'block' : 'none';
+  $('#hsPost').style.display = 'flex'; $('#hsPost').disabled = false; $('#hsEndList').innerHTML = '';
+  hsMsg('Your handle shows publicly next to your score.');
+}
+$('#hsPost').onclick = async () => {
+  const net = $('#hsNet').value, handle = $('#hsHandle').value.trim().replace(/^@/, '');
+  if (!HS_RE[net].test(handle)) return hsMsg(net === 'x' ? 'X handles are 1–15 letters, numbers or _.' : 'Instagram handles are up to 30 letters, numbers, . or _.');
+  try { localStorage.setItem('hsNet', net); localStorage.setItem('hsHandle', handle); } catch (e) {}
+  $('#hsPost').disabled = true; hsMsg('Posting…');
+  try {
+    const { status, data } = await hsFetch({ method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ net, handle, score: S.score, gate: S.gate, time: Math.round(S.time), combo: S.maxCombo, crasher: fighter().id }) });
+    if (status !== 200) throw data.error;
+    $('#hsPost').style.display = 'none';
+    hsMsg(data.best > S.score ? 'Your best is still ' + data.best.toLocaleString() + ' · #' + data.rank + ' on the board' : 'You’re #' + data.rank + ' on the board!');
+    hsRender($('#hsEndList'), data.top, { net, handle });
+  } catch (err) {
+    $('#hsPost').disabled = false;
+    hsMsg({ bad_handle: 'That handle can’t be used.', bad_score: 'That score couldn’t be verified.', slow_down: 'Too many posts. Try again in a minute.' }[err] || 'High scores are offline right now. Try again later.');
+  }
+};
+$('#bScores').onclick = async () => {
+  show('sScores'); const list = $('#hsTopList'), m = $('#hsTopMsg'); list.innerHTML = ''; m.textContent = 'Loading…';
+  try { const { status, data } = await hsFetch(); if (status !== 200) throw 0; hsRender(list, data.top, hsMine()); m.textContent = data.top.length ? '' : 'No scores yet. Be the first.'; }
+  catch (e) { m.textContent = 'High scores are offline right now.'; }
+};
+$('#hsBack').onclick = () => show('sStart');
+
 let licenseURL = null;
 async function finish(cleared) {
   if (mode !== 'play') return;
@@ -1287,7 +1366,7 @@ async function finish(cleared) {
   licenseURL = makeLicense(cleared);
   $('#endImg').src = licenseURL;
   $('#endKicker').textContent = 'Fell at Gate ' + S.gate + ' · ' + rankOf();
-  showEndButtons();
+  showEndButtons(); hsReset();
   $('#bShare').style.display = navigator.canShare && navigator.canShare({ files: [new File([new Blob()], 'x.png', { type: 'image/png' })] }) ? 'flex' : 'none';
   show('sEnd');
 }

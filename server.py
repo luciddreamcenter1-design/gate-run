@@ -336,6 +336,61 @@ def gc():
             del JOBS[k]
 
 
+# ---------------------------------------------------------------- high scores
+# Stored in Upstash Redis over its REST API (stdlib only). Without UPSTASH_REDIS_REST_URL/TOKEN they live in
+# memory and reset on restart. One entry per handle: its best score. Basic checks only; the game runs in the browser.
+KV_URL = os.environ.get("UPSTASH_REDIS_REST_URL", "").rstrip("/")
+KV_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
+SCORES_MEM, SCORE_HITS, TOP_CACHE = {}, {}, {"t": 0, "top": None}
+HANDLE_RE = {"x": re.compile(r"[A-Za-z0-9_]{1,15}"), "ig": re.compile(r"(?!\.)(?!.*\.\.)[A-Za-z0-9._]{1,30}(?<!\.)")}
+BLOCKED = ("fuck", "shit", "cunt", "nigg", "fag", "rape", "nazi", "hitler", "porn", "whore", "slut", "kys")
+CORS_ORIGINS = {"https://luciddreamcenter1-design.github.io"}
+
+
+def kv(*cmds):
+    req = urllib.request.Request(KV_URL + "/pipeline", data=json.dumps(cmds).encode(),
+                                 headers={"Authorization": "Bearer " + KV_TOKEN, "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=8) as r:
+        out = json.load(r)
+    if any("error" in o for o in out):
+        raise RuntimeError("upstash error")
+    return [o["result"] for o in out]
+
+
+def max_score(gate):
+    # generous ceiling per Gate: every Riftspawn a brute at max combo, the boss and its summons, clear bonus, shards
+    return sum((6 + 3.5 * g) * 300 * (1 + .1 * g) + 150 * g + 2000 + (6000 * (1 + .1 * g) if g % 5 == 0 else 0) for g in range(1, gate + 1))
+
+
+def top_scores(n=25):
+    if TOP_CACHE["top"] is not None and time.time() - TOP_CACHE["t"] < 10:
+        return TOP_CACHE["top"][:n]
+    if KV_URL:
+        ids = kv(["ZREVRANGE", "gr:scores", 0, 49])[0]
+        top = [json.loads(m) for m in (kv(["HMGET", "gr:meta", *ids])[0] if ids else []) if m]
+    else:
+        top = sorted(SCORES_MEM.values(), key=lambda e: (-e["score"], e["t"]))[:50]
+    TOP_CACHE.update(t=time.time(), top=top)
+    return top[:n]
+
+
+def save_score(e):
+    """Keep the best score per handle; returns (rank, best) for that handle."""
+    member = e["net"] + ":" + e["handle"].lower()
+    if KV_URL:
+        if kv(["ZADD", "gr:scores", "GT", "CH", e["score"], member])[0]:
+            kv(["HSET", "gr:meta", member, json.dumps(e)])
+        rank, best = kv(["ZREVRANK", "gr:scores", member], ["ZSCORE", "gr:scores", member])
+        rank, best = int(rank) + 1, int(float(best))
+    else:
+        if member not in SCORES_MEM or e["score"] > SCORES_MEM[member]["score"]:
+            SCORES_MEM[member] = e
+        best = SCORES_MEM[member]["score"]
+        rank = 1 + sum(1 for v in SCORES_MEM.values() if v["score"] > best)
+    TOP_CACHE["top"] = None
+    return rank, best
+
+
 # ---------------------------------------------------------------- http
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
@@ -351,8 +406,53 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(raw)))
+        self.cors()
         self.end_headers()
         self.wfile.write(raw)
+
+    def cors(self):  # the GitHub Pages copy of the game reads and posts high scores here
+        origin = self.headers.get("Origin")
+        if origin in CORS_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+
+    def do_OPTIONS(self):
+        if self.path.split("?")[0] != "/api/scores":
+            return self.send_error(404)
+        self.send_response(204)
+        self.cors()
+        self.send_header("Access-Control-Allow-Methods", "GET, POST")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.end_headers()
+
+    def post_score(self):
+        ip, now = self.client_ip(), time.time()
+        hits = [t for t in SCORE_HITS.get(ip, []) if now - t < 3600]
+        if len(hits) >= 20 or (hits and now - hits[-1] < 8):
+            return self.send_json({"error": "slow_down"}, 429)
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            assert 0 < n < 2000
+            b = json.loads(self.rfile.read(n))
+            net, handle = b["net"], str(b["handle"]).strip().lstrip("@")
+            score, gate, secs = int(b["score"]), int(b["gate"]), float(b["time"])
+            assert net in HANDLE_RE and HANDLE_RE[net].fullmatch(handle)
+        except Exception:
+            return self.send_json({"error": "bad_handle"}, 400)
+        if any(w in handle.lower() for w in BLOCKED):
+            return self.send_json({"error": "bad_handle"}, 400)
+        if not (1 <= gate <= 999 and 0 < score <= max_score(gate) and secs >= 4 * (gate - 1)):
+            return self.send_json({"error": "bad_score"}, 400)
+        SCORE_HITS[ip] = hits + [now]
+        crasher = str(b.get("crasher") or "")
+        e = {"net": net, "handle": handle, "score": score, "gate": gate, "combo": max(0, min(9999, int(b.get("combo") or 0))),
+             "crasher": crasher if crasher in ("ren", "kira", "brann", "vex", "you") else "", "t": int(now)}
+        try:
+            rank, best = save_score(e)
+            return self.send_json({"rank": rank, "best": best, "top": top_scores(10)})
+        except Exception:
+            return self.send_json({"error": "scores_unavailable"}, 503)
 
     def visitor_key(self):
         k = (self.headers.get("X-Comfy-Key") or "").strip()
@@ -375,6 +475,11 @@ class Handler(SimpleHTTPRequestHandler):
                 "local": local_up(), "tier": tier, "free_left": min(self.free_left()) if tier == "free" else None,
                 "routes": {s: [{"route": r, "ready": route_ready(r, vk)} for r in rs] for s, rs in ROUTES.items()},
             })
+        if path == "/api/scores":
+            try:
+                return self.send_json({"top": top_scores(), "persistent": bool(KV_URL)})
+            except Exception:
+                return self.send_json({"error": "scores_unavailable"}, 503)
         m = re.fullmatch(r"/api/(jobs|media)/([\w-]+)", path)
         if m:
             job = JOBS.get(m.group(2))
@@ -399,6 +504,8 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        if self.path == "/api/scores":
+            return self.post_score()
         if self.path != "/api/forge":
             return self.send_error(404)
         try:

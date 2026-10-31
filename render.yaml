@@ -12,6 +12,11 @@ services:
     envVars:
       - key: COMFY_API_KEY
         sync: false
+      # High scores persist in a free Upstash Redis database (upstash.com, REST URL + token). Without them they reset on restart.
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
       - key: FREE_LIMITS
         value: "1"
       - key: FREE_JOBS_PER_IP
