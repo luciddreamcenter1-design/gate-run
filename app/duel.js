@@ -45,7 +45,7 @@ const Duel = (() => {
         if (dx * f.face > -60 && Math.abs(dx) < 520 && Math.abs(o.y - f.y) < 220) hurt(o, f, DMG.sp, 620, .7, idx, true); }
       if (f.st >= .6) f.state = 'free';
     } else if (f.state === 'hurt') {
-      f.x += f.vx * dt; f.vx *= .86; setA(f, 'idle', 0);
+      f.x += f.vx * dt; f.vx *= Math.pow(.86, dt * 60); setA(f, 'idle', 0);
       if (f.st >= (f.long ? .55 : .3)) f.state = 'free';
     }
     f.x = clamp(f.x, -AW, AW); f.y = clamp(f.y, -AH, AH);
