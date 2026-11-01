@@ -89,7 +89,7 @@ select{background:#0c0a18;border:1px solid var(--line);color:var(--ink);border-r
 #hsTop3 li{padding:7px 6px}
 .hs-list li.me{background:rgba(56,214,255,.12);border-radius:8px}
 .hs-list .rk{width:26px;color:var(--muted);font:700 14px "Chakra Petch",sans-serif}
-.hs-list a{flex:1;min-width:0;color:var(--ink);text-decoration:none;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-list a,.hs-list .nm{flex:1;min-width:0;color:var(--ink);text-decoration:none;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hs-list .net{font:700 11px "Chakra Petch",sans-serif;color:var(--muted);margin-right:6px}
 .hs-list .gt{font-size:12px;color:var(--muted);white-space:nowrap}
 .hs-list .sc{font:700 15px "Chakra Petch",sans-serif;color:var(--gold);min-width:64px;text-align:right}
@@ -156,7 +156,7 @@ a{color:var(--gate2)}
     <button class="btn ghost" id="bClip" style="display:none">Save my trailer</button>
     <div id="hsBox" style="margin-top:16px">
       <label class="field" for="hsHandle">Post your score</label>
-      <div class="row"><select id="hsNet" aria-label="Network"><option value="x">X</option><option value="ig">Instagram</option></select><input type="text" id="hsHandle" placeholder="@handle" maxlength="31" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="row"><select id="hsNet" aria-label="Show as"><option value="name">Name</option><option value="x">X</option><option value="ig">Instagram</option></select><input type="text" id="hsHandle" placeholder="Your name" maxlength="31" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
       <button class="btn" id="hsPost">Post to High Scores</button>
       <div class="tiny" id="hsMsg"></div>
       <ol class="hs-list" id="hsEndList"></ol>
@@ -1335,9 +1335,11 @@ function rankColor(r) { return { Legend: '#ffd84a', Warlord: '#ff7a45', Vanguard
 
 /* ---------- high scores: best score per X / Instagram handle (server.py keeps them in Upstash Redis) ---------- */
 const SCORE_API = /\.github\.io$/.test(location.hostname) ? 'https://gate-run.onrender.com' : '';   // the Pages copy has no server
-const HS_RE = { x: /^[A-Za-z0-9_]{1,15}$/, ig: /^(?!\.)(?!.*\.\.)[A-Za-z0-9._]{1,30}(?<!\.)$/ };
+const HS_RE = { name: /^[A-Za-z0-9À-ÖØ-öø-ÿ][A-Za-z0-9À-ÖØ-öø-ÿ.'\- ]{0,15}$/, x: /^[A-Za-z0-9_]{1,15}$/, ig: /^(?!\.)(?!.*\.\.)[A-Za-z0-9._]{1,30}(?<!\.)$/ };
 const HS_URL = { x: 'https://x.com/', ig: 'https://instagram.com/' };
-const hsMine = () => { try { return { net: localStorage.getItem('hsNet') || 'x', handle: localStorage.getItem('hsHandle') || '' }; } catch (e) { return { net: 'x', handle: '' }; } };
+const hsMine = () => { try { return { net: localStorage.getItem('hsNet') || 'name', handle: localStorage.getItem('hsHandle') || '' }; } catch (e) { return { net: 'name', handle: '' }; } };
+const hsId = () => { try { let id = localStorage.getItem('hsId'); if (!/^[0-9a-f]{12}$/.test(id || '')) localStorage.setItem('hsId', id = [...crypto.getRandomValues(new Uint8Array(6))].map(b => b.toString(16).padStart(2, '0')).join('')); return id; } catch (e) { return '000000000000'; } };
+$('#hsNet').onchange = () => { $('#hsHandle').placeholder = $('#hsNet').value === 'name' ? 'Your name' : '@handle'; };
 async function hsFetch(opts) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 45000);   // the free server can take ~30 s to wake up
   try { const r = await fetch(SCORE_API + '/api/scores', { ...opts, signal: ctl.signal }); return { status: r.status, data: await r.json().catch(() => ({})) }; }
@@ -1348,34 +1350,36 @@ function hsRender(list, top, me) {
   top.forEach((e, i) => {
     const li = document.createElement('li'), el = (tag, cls, txt) => { const x = document.createElement(tag); x.className = cls; x.textContent = txt; return x; };
     if (me && me.handle && e.net === me.net && e.handle.toLowerCase() === me.handle.toLowerCase()) li.className = 'me';
-    const a = document.createElement('a'); a.href = HS_URL[e.net] + encodeURIComponent(e.handle); a.target = '_blank'; a.rel = 'noopener nofollow ugc';
-    a.append(el('span', 'net', e.net === 'ig' ? 'IG' : 'X'), '@' + e.handle);
+    let a;
+    if (HS_URL[e.net]) { a = document.createElement('a'); a.href = HS_URL[e.net] + encodeURIComponent(e.handle); a.target = '_blank'; a.rel = 'noopener nofollow ugc';
+      a.append(el('span', 'net', e.net === 'ig' ? 'IG' : 'X'), '@' + e.handle); }
+    else a = el('span', 'nm', e.handle);   // a plain name: no link
     li.append(el('span', 'rk', i + 1), a, el('span', 'gt', 'Gate ' + e.gate), el('span', 'sc', e.score.toLocaleString()));
     list.appendChild(li);
   });
 }
 const hsMsg = t => { $('#hsMsg').textContent = t; };
 function hsReset() {
-  const me = hsMine(); $('#hsNet').value = me.net; $('#hsHandle').value = me.handle;
+  const me = hsMine(); $('#hsNet').value = me.net; $('#hsHandle').value = me.handle; $('#hsNet').onchange();
   $('#hsBox').style.display = S.score > 0 && S.gate >= 1 ? 'block' : 'none';
   $('#hsPost').style.display = 'flex'; $('#hsPost').disabled = false; $('#hsEndList').innerHTML = '';
-  hsMsg('Your handle shows publicly next to your score.');
+  hsMsg('Use a name, or your X or Instagram handle. It shows publicly next to your score.');
 }
 $('#hsPost').onclick = async () => {
-  const net = $('#hsNet').value, handle = $('#hsHandle').value.trim().replace(/^@/, '');
-  if (!HS_RE[net].test(handle)) return hsMsg(net === 'x' ? 'X handles are 1–15 letters, numbers or _.' : 'Instagram handles are up to 30 letters, numbers, . or _.');
+  const net = $('#hsNet').value, raw = $('#hsHandle').value.trim().replace(/\s+/g, ' '), handle = net === 'name' ? raw : raw.replace(/^@/, '');
+  if (!HS_RE[net].test(handle)) return hsMsg(net === 'name' ? 'Names are 1–16 letters or numbers (spaces, . \' - are fine).' : net === 'x' ? 'X handles are 1–15 letters, numbers or _.' : 'Instagram handles are up to 30 letters, numbers, . or _.');
   try { localStorage.setItem('hsNet', net); localStorage.setItem('hsHandle', handle); } catch (e) {}
   $('#hsPost').disabled = true; hsMsg('Posting…');
   try {
     const { status, data } = await hsFetch({ method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ net, handle, score: S.score, gate: S.gate, time: Math.round(S.time), combo: S.maxCombo, crasher: fighter().id }) });
+      body: JSON.stringify({ net, handle, id: hsId(), score: S.score, gate: S.gate, time: Math.round(S.time), combo: S.maxCombo, crasher: fighter().id }) });
     if (status !== 200) throw data.error;
     $('#hsPost').style.display = 'none';
     hsMsg(data.best > S.score ? 'Your best is still ' + data.best.toLocaleString() + ' · #' + data.rank + ' on the board' : 'You’re #' + data.rank + ' on the board!');
     hsRender($('#hsEndList'), data.top, { net, handle });
   } catch (err) {
     $('#hsPost').disabled = false;
-    hsMsg({ bad_handle: 'That handle can’t be used.', bad_score: 'That score couldn’t be verified.', slow_down: 'Too many posts. Try again in a minute.' }[err] || 'High scores are offline right now. Try again later.');
+    hsMsg({ bad_handle: net === 'name' ? 'That name can’t be used. Try another.' : 'That handle can’t be used.', bad_score: 'That score couldn’t be verified.', slow_down: 'Too many posts. Try again in a minute.' }[err] || 'High scores are offline right now. Try again later.');
   }
 };
 $('#bScores').onclick = async () => {

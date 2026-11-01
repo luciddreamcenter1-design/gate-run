@@ -23,7 +23,7 @@ Any of these can also go in a .env file next to this script (gitignored).
 Router works with the standard library. Cloud routes need `pip install comfy-sdk`;
 when it is installed the Router calls go through it too.
 """
-import base64, json, os, random, re, threading, time, uuid
+import base64, json, os, random, re, threading, time, unicodedata, uuid
 import urllib.error, urllib.parse, urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
@@ -364,9 +364,30 @@ def gc():
 KV_URL = os.environ.get("UPSTASH_REDIS_REST_URL", "").rstrip("/")
 KV_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
 SCORES_MEM, SCORE_HITS, TOP_CACHE = {}, {}, {"t": 0, "top": None}
-HANDLE_RE = {"x": re.compile(r"[A-Za-z0-9_]{1,15}"), "ig": re.compile(r"(?!\.)(?!.*\.\.)[A-Za-z0-9._]{1,30}(?<!\.)")}
-BLOCKED = ("fuck", "shit", "cunt", "nigg", "fag", "rape", "nazi", "hitler", "porn", "whore", "slut", "kys")
+HANDLE_RE = {"x": re.compile(r"[A-Za-z0-9_]{1,15}"), "ig": re.compile(r"(?!\.)(?!.*\.\.)[A-Za-z0-9._]{1,30}(?<!\.)"),
+             # a plain name, 1-16 chars; Latin letters only so look-alike letters from other scripts can't dodge the filter
+             "name": re.compile(r"[A-Za-z0-9À-ÖØ-öø-ÿ][A-Za-z0-9À-ÖØ-öø-ÿ.'\- ]{0,15}")}
+# Blocked anywhere in the name, after undoing leetspeak and separators (f.u_c-k, sh1t, fuuuck)
+BLOCKED = ("fuck", "fuk", "shit", "cunt", "nigg", "niga", "faggot", "fagot", "whore", "slut", "bitch", "biatch", "pussy",
+           "penis", "vagina", "dildo", "porn", "hentai", "blowjob", "handjob", "cumshot", "jizz", "wank", "twat", "orgasm",
+           "boob", "asshole", "arsehole", "dickhead", "bigdick", "suckmy", "motherf", "retard", "molest", "incest",
+           "nazi", "hitler", "kkk", "rapist", "nsfw", "xxx", "milf", "horny", "titties", "bollock", "clit", "spunk", "semen")
+# Blocked only as a whole word, since they hide inside normal names (grape, Cassidy, Dickens, Hancock, torpedo)
+BLOCKED_WORDS = {"ass", "arse", "cum", "dick", "cock", "tit", "tits", "sex", "anal", "rape", "fag", "kys", "pedo", "hoe",
+                 "nude", "nudes", "piss", "cuck", "thot", "slag", "skank", "coon", "spic", "chink", "kike", "gook", "wetback"}
+LEET = str.maketrans("013457@$!|8", "oieastasiib")
 CORS_ORIGINS = {"https://luciddreamcenter1-design.github.io"}
+
+
+def explicit(text):
+    """True when a public name or handle contains a slur or sexual/profane word."""
+    low = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower().translate(LEET)
+    flat = re.sub(r"[^a-z]", "", low)
+    squash = re.sub(r"(.)\1+", r"\1", flat)   # fuuuck -> fuck
+    if any(w in flat or w in squash for w in BLOCKED):
+        return True
+    words = re.findall(r"[a-z]+", low)
+    return any(w in BLOCKED_WORDS or re.sub(r"(.)\1+", r"\1", w) in BLOCKED_WORDS for w in words)
 
 
 def kv(*cmds):
@@ -398,7 +419,7 @@ def top_scores(n=25):
 
 def save_score(e):
     """Keep the best score per handle; returns (rank, best) for that handle."""
-    member = e["net"] + ":" + e["handle"].lower()
+    member = e["net"] + ":" + e["handle"].lower() + (("#" + e.pop("cid")) if "cid" in e else "")
     if KV_URL:
         if kv(["ZADD", "gr:scores", "GT", "CH", e["score"], member])[0]:
             kv(["HSET", "gr:meta", member, json.dumps(e)])
@@ -457,12 +478,16 @@ class Handler(SimpleHTTPRequestHandler):
             n = int(self.headers.get("Content-Length") or 0)
             assert 0 < n < 2000
             b = json.loads(self.rfile.read(n))
-            net, handle = b["net"], str(b["handle"]).strip().lstrip("@")
+            net, handle = b["net"], " ".join(str(b["handle"]).split())
+            if net != "name":
+                handle = handle.lstrip("@")
             score, gate, secs = int(b["score"]), int(b["gate"]), float(b["time"])
             assert net in HANDLE_RE and HANDLE_RE[net].fullmatch(handle)
+            cid = str(b.get("id") or "")   # a plain name is kept per browser, so two players called Cam don't merge
+            assert net != "name" or re.fullmatch(r"[0-9a-f]{12}", cid)
         except Exception:
             return self.send_json({"error": "bad_handle"}, 400)
-        if any(w in handle.lower() for w in BLOCKED):
+        if explicit(handle):
             return self.send_json({"error": "bad_handle"}, 400)
         if not (1 <= gate <= 999 and 0 < score <= max_score(gate) and secs >= 4 * (gate - 1)):
             return self.send_json({"error": "bad_score"}, 400)
@@ -470,6 +495,8 @@ class Handler(SimpleHTTPRequestHandler):
         crasher = str(b.get("crasher") or "")
         e = {"net": net, "handle": handle, "score": score, "gate": gate, "combo": max(0, min(9999, int(b.get("combo") or 0))),
              "crasher": crasher if crasher in ("ren", "kira", "brann", "vex", "you") else "", "t": int(now)}
+        if net == "name":
+            e["cid"] = cid
         try:
             rank, best = save_score(e)
             return self.send_json({"rank": rank, "best": best, "top": top_scores(10)})
