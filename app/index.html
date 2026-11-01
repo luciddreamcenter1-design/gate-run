@@ -136,7 +136,7 @@ a{color:var(--gate2)}
     <div class="pair"><canvas id="selfieThumb" width="240" height="240"></canvas><span class="arrow">→</span><canvas id="hunterThumb" width="240" height="240"></canvas></div>
     <ul class="steps">
       <li id="st1"><span class="ic"></span><div>Reading your photo</div></li>
-      <li id="st2"><span class="ic"></span><div>Forging your Crasher<small>FLUX 3 image edit</small></div></li>
+      <li id="st2"><span class="ic"></span><div>Forging your Crasher<small>Gemini Flash image edit</small></div></li>
       <li id="st3"><span class="ic"></span><div>Directing your trailer<small>3-shot trailer · FLUX 3 keyframes + LTX-2 + LoRA</small></div></li>
       <li id="st4"><span class="ic"></span><div>Animating your Crasher<small>Full-body moveset · LTX-2 on Comfy Cloud</small></div></li>
     </ul>
@@ -299,7 +299,7 @@ async function detectComfy() {
     if (needKey) { $('#keyBox').style.display = 'block'; $('#tierTxt').textContent = '· or play free as a guest'; }
   }
 }
-const MODEL_NAME = r => /flux-3/.test(r) ? 'FLUX 3' : /kontext|portrait/.test(r) ? 'FLUX Kontext' : /lora/.test(r) ? 'LTX-2 + LoRA' : /ltx/.test(r) ? 'LTX 2.5' : 'LTX-Video';
+const MODEL_NAME = r => /gemini/.test(r) ? 'Gemini Flash' : /flux-3/.test(r) ? 'FLUX 3' : /kontext|portrait/.test(r) ? 'FLUX Kontext' : /lora/.test(r) ? 'LTX-2 + LoRA' : /ltx/.test(r) ? 'LTX 2.5' : 'LTX-Video';
 function toDataURL(blob) { return new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); }
 const JOB_LIMIT = { arenaground: 300, portrait: 300, keyframe: 300, body: 300, voice: 120, clip: 600, move: 900, upscale: 300 };   // seconds before giving up on a stage
 async function forgeJob(stage, blob, onNote, extra = {}) {
@@ -549,13 +549,16 @@ async function forge(file) {
   clipURL = null; clipPromise = null; clipPlate = false; usedComfy = false; trailer = null; delete routesUsed.portrait; delete routesUsed.clip;
   ['1','2','3','4'].forEach(n => setStep(n, ''));
   setStep(4, '', 'Full-body moveset · LTX-2 on Comfy Cloud');
-  setStep(2, '', 'FLUX 3 image edit'); setStep(3, '', $('#fullIn').checked && !(status && status.tier === 'free') ? '3-shot trailer · FLUX 3 keyframes + LTX-2 + LoRA' : 'Quick 1-shot trailer · LTX-2 + LoRA');
+  setStep(2, '', 'Gemini Flash image edit'); setStep(3, '', $('#fullIn').checked && !(status && status.tier === 'free') ? '3-shot trailer · FLUX 3 keyframes + LTX-2 + LoRA' : 'Quick 1-shot trailer · LTX-2 + LoRA');
   drawThumb('#hunterThumb', null);
   setStep(1, 'run');
   try { selfieImg = await loadImg(URL.createObjectURL(file)); }
   catch (e) { toast('Could not read that photo. Try a JPG or PNG.'); show('sStart'); return; }
   drawThumb('#selfieThumb', squareCanvas(selfieImg, 240));
   setStep(1, 'done');
+  // no waiting on the portrait: fight now with a quick preview; the anime portrait and body swap in mid-fight
+  portrait = squareCanvas(toonify(selfieImg), 512);
+  $('#forgeTitle').textContent = 'Enter now, your anime form lands mid-fight'; $('#bEnter').disabled = false;
 
   let hunter = null;
   if (comfyOK) {
@@ -564,6 +567,7 @@ async function forge(file) {
       const res = await forgeJob('portrait', await normalizedBlob(selfieImg), j => setStep(2, 'run', ROUTE_LABEL(j.route) + (j.note && j.note.includes(' · ') ? ' · ' + j.note.split(' · ').pop() : '')));
       hunter = await loadImg(res.url); usedComfy = true; routesUsed.portrait = res.route;
       setStep(2, 'done', 'Forged with ' + ROUTE_LABEL(res.route));
+      if (mode === 'play') sysMsg('[RIFT OS] Crasher portrait forged.');
       // The trailer renders in the background so the player can start right away:
       // shot 1 animates the portrait; shots 2-3 get FLUX 3 keyframes first; all run in parallel.
       const hunterBlob = await (await fetch(res.url)).blob();

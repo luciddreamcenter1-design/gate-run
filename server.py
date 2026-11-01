@@ -51,7 +51,7 @@ USAGE = {}
 
 ROUTES = {
     "portrait": os.environ.get("PORTRAIT_ROUTES",
-        "router:bfl/flux-3-image,router:bfl/flux-kontext-pro,local:hunter_portrait_api.json"),
+        "router:vertexai/gemini-3.1-flash-image,router:bfl/flux-3-image,router:bfl/flux-kontext-pro,local:hunter_portrait_api.json"),
     "clip": os.environ.get("CLIP_ROUTES",
         "cloud:gate_clip_ltx2_lora_api.json,cloud:gate_clip_ltx25_api.json,"
         "local:gate_clip_ltx25_api.json,local:gate_clip_api.json,router:ltx/ltx-2-5-fast"),
@@ -115,6 +115,21 @@ def find_url(obj):
     return None
 
 
+def find_inline(obj):
+    """Base64 image data in a Gemini-style response (inlineData parts), if any."""
+    if isinstance(obj, dict):
+        d = obj.get("inlineData") or obj.get("inline_data")
+        if isinstance(d, dict) and d.get("data"):
+            return d["data"]
+        obj = list(obj.values())
+    if isinstance(obj, list):
+        for v in obj:
+            r = find_inline(v)
+            if r:
+                return r
+    return None
+
+
 def sniff(data):
     if data[:8] == b"\x89PNG\r\n\x1a\n": return "image/png"
     if data[:3] == b"\xff\xd8\xff": return "image/jpeg"
@@ -168,6 +183,10 @@ def router_body(model, img_b64, opts):
     if "upscale" in model:
         return {"input_video": "data:video/mp4;base64," + img_b64, "upscale_factor": 1.5, "creativity": 0}, False
     prompt = opts.get("prompt") or PORTRAIT_PROMPT
+    if "gemini" in model:  # Gemini Flash Image: ~22 s for the portrait vs ~50 s for FLUX 3
+        return {"contents": [{"role": "user", "parts": [{"text": prompt + " Square 1:1 portrait."},
+                {"inlineData": {"mimeType": sniff(base64.b64decode(img_b64)) or "image/png", "data": img_b64}}]}],
+                "generationConfig": {"responseModalities": ["IMAGE"]}}, False
     if opts.get("prompt") and not model.startswith("ltx/"):  # trailer keyframe / sprite body
         ar = opts.get("aspect", "9:16")
         if "kontext" in model:
@@ -221,6 +240,9 @@ def run_router(job, model, img, opts):
             raise RuntimeError(result.get("detail") or result["error_type"])
     if isinstance(result, dict) and str(result.get("status", "")).lower() in ("failed", "error", "request moderated", "content moderated"):
         raise RuntimeError(f"{model}: {result.get('status')}")
+    inline = find_inline(result)
+    if inline:
+        return base64.b64decode(inline)
     url = find_url(result.get("result", result) if isinstance(result, dict) else result)
     if not url:
         raise RuntimeError(f"{model} returned no media")

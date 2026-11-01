@@ -32,7 +32,7 @@ No selfie, no credits, no problem: four original Crashers (Ren, Kira, Brann and 
 
 | | |
 |---|---|
-| **Selfie to Crasher** | FLUX 3 on Comfy Router redraws you as a semi-realistic manhwa hero who still looks like you. |
+| **Selfie to Crasher** | Gemini 3.1 Flash Image on Comfy Router redraws you as a semi-realistic manhwa hero who still looks like you in about 20 s (FLUX 3 is the fallback). You can enter the first Gate right away; your portrait and body swap in mid-fight. |
 | **Your anime trailer** | FLUX 3 keyframes, then **LTX-2 image-to-video + camera LoRA** (a ComfyUI workflow on Comfy Cloud) animates three shots with sound. An ElevenLabs narrator says your name and FLUX Video Upscale finishes it at 1056×1920. The browser edits it with title cards, grade, grain and letterbox. |
 | **Play as yourself** | FLUX 3 draws your full body on green and LTX-2 animates five moves. The browser keys the green, trims the frames and bakes sprite sheets. It takes about 3.5 minutes from selfie to playable you. |
 | **Real combat** | 3-hit combos with aim assist, dash i-frames, a special meter, hit-stop, juggles, enemy telegraphs, weapon drops, and boss entrance cinematics. Runs at 60 fps on phones. |
@@ -82,7 +82,7 @@ The free GitHub Pages link above stays up too, as the no-key guest version.
 
 | Stage | Route order (default) |
 |---|---|
-| Portrait | `router:bfl/flux-3-image` → `router:bfl/flux-kontext-pro` → `local:hunter_portrait_api.json` |
+| Portrait | `router:vertexai/gemini-3.1-flash-image` → `router:bfl/flux-3-image` → `router:bfl/flux-kontext-pro` → `local:hunter_portrait_api.json` |
 | Gate clip / trailer shots | `cloud:gate_clip_ltx2_lora_api.json` → `cloud:gate_clip_ltx25_api.json` → `local:gate_clip_ltx25_api.json` → `local:gate_clip_api.json` → `router:ltx/ltx-2-5-fast` |
 | Trailer keyframes | `router:bfl/flux-3-image` → `router:bfl/flux-kontext-pro` |
 | Narrator | `router:elevenlabs/eleven_v3` → `router:elevenlabs/eleven_multilingual_v2` |
@@ -107,7 +107,7 @@ Measured on the real services:
 
 | Step | Time |
 |---|---|
-| Portrait (FLUX 3 via Router) | about 55 s |
+| Portrait (Gemini 3.1 Flash Image via Router) | about 22 s (FLUX 3: about 50 s) |
 | Each trailer keyframe (FLUX 3) | about 55 s |
 | Each LTX-2 + LoRA shot (Comfy Cloud, 704×1280, 121 frames at 24 fps, AAC audio) | 35–65 s |
 | Upscale | about 70 s |
